@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KAOMA Marge — Calculateur de marge</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --graphite:#1F2937; --paper:#FBF7F3; --sage:#5A7A5A; --sage-deep:#3F5A3F;
+    --peach:#F5C2A5; --mint:#A8DCD4; --success:#058352; --warning:#C8950F;
+    --danger:#C44A3D; --info:#16726B;
+    --line:#E7E0D8; --card:#FFFFFF; --muted:#6B7280;
+    --shadow:0 1px 3px rgba(31,41,55,.06),0 8px 24px rgba(31,41,55,.05);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Inter',system-ui,sans-serif;background:var(--paper);color:var(--graphite);line-height:1.5;-webkit-font-smoothing:antialiased}
+  h1,h2,h3,h4{font-family:'Inter Tight',sans-serif;letter-spacing:-.02em}
+  .wrap{max-width:1180px;margin:0 auto;padding:20px 18px 80px}
+
+  /* Header */
+  header{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;padding:14px 0 22px;border-bottom:1px solid var(--line);margin-bottom:26px}
+  .brand{display:flex;align-items:center;gap:12px}
+  .logo{width:40px;height:40px;border-radius:10px;background:var(--graphite);color:var(--paper);display:grid;place-items:center;font-family:'Inter Tight';font-weight:800;font-size:20px}
+  .brand h1{font-size:21px;font-weight:800}
+  .brand .sub{font-size:12px;color:var(--muted);font-weight:500}
+  .dossier-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .dossier-bar input{font-family:'Inter Tight';font-weight:600;font-size:15px;padding:9px 13px;border:1px solid var(--line);border-radius:9px;background:var(--card);min-width:200px;color:var(--graphite)}
+  .btn{font-family:'Inter';font-weight:600;font-size:13.5px;padding:9px 15px;border-radius:9px;border:1px solid var(--line);background:var(--card);color:var(--graphite);cursor:pointer;transition:.12s;display:inline-flex;align-items:center;gap:6px}
+  .btn:hover{border-color:var(--graphite)}
+  .btn.primary{background:var(--graphite);color:var(--paper);border-color:var(--graphite)}
+  .btn.primary:hover{background:#000}
+  .btn.ghost{background:transparent}
+  .btn.sm{padding:6px 11px;font-size:12.5px}
+  .btn.danger{color:var(--danger);border-color:#eccac4}
+  .btn.danger:hover{background:#fbeae7;border-color:var(--danger)}
+
+  /* Mode toggle */
+  .modebar{display:flex;background:#efe8e0;border-radius:13px;padding:5px;gap:5px;margin-bottom:24px;max-width:620px}
+  .modebar button{flex:1;border:0;background:transparent;font-family:'Inter Tight';font-weight:700;font-size:14.5px;color:var(--muted);padding:13px 12px;border-radius:9px;cursor:pointer;transition:.15s;display:flex;flex-direction:column;align-items:center;gap:2px;line-height:1.25}
+  .modebar button small{font-family:'Inter';font-weight:500;font-size:11.5px;opacity:.75}
+  .modebar button.active{background:var(--card);color:var(--graphite);box-shadow:var(--shadow)}
+
+  .grid{display:grid;grid-template-columns:1.15fr .85fr;gap:22px;align-items:start}
+  @media(max-width:880px){.grid{grid-template-columns:1fr}}
+
+  .card{background:var(--card);border:1px solid var(--line);border-radius:15px;padding:20px 20px 22px;box-shadow:var(--shadow)}
+  .card h2{font-size:16px;font-weight:700;margin-bottom:4px;display:flex;align-items:center;gap:8px}
+  .card .hint{font-size:12.5px;color:var(--muted);margin-bottom:16px}
+  .eyebrow{font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--sage)}
+
+  /* Cost table */
+  table{width:100%;border-collapse:collapse}
+  th{text-align:left;font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);padding:0 8px 8px}
+  th.r,td.r{text-align:right}
+  td{padding:4px 0}
+  .line-row td{padding:3px 4px}
+  .line-row input[type=text]{width:100%;border:1px solid transparent;border-radius:7px;padding:8px 9px;font-size:13.5px;background:transparent;font-family:'Inter'}
+  .line-row input[type=text]:hover{background:#faf7f3}
+  .line-row input[type=text]:focus{border-color:var(--line);background:#fff;outline:none}
+  .amt{width:118px;text-align:right;border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:13.5px;font-family:'Inter Tight';font-weight:600;background:#fff}
+  .amt:focus{outline:none;border-color:var(--sage)}
+  .tag{font-size:10.5px;font-weight:600;padding:2px 7px;border-radius:20px;background:#f0ece6;color:var(--muted);border:0;cursor:pointer;font-family:'Inter'}
+  .tag.interne{background:#e3efe3;color:var(--sage-deep)}
+  .tag.externe{background:#fdeee4;color:#a35a32}
+  .del{color:var(--muted);background:transparent;border:0;cursor:pointer;font-size:16px;line-height:1;padding:4px 6px;border-radius:6px}
+  .del:hover{color:var(--danger);background:#fbeae7}
+  .total-row td{border-top:2px solid var(--graphite);padding-top:12px;font-family:'Inter Tight';font-weight:800;font-size:16px}
+
+  .addline{margin-top:12px;display:flex;gap:8px;flex-wrap:wrap}
+
+  /* Right column / results */
+  .field{margin-bottom:16px}
+  .field label{display:block;font-size:12.5px;font-weight:600;margin-bottom:6px}
+  .bigInput{width:100%;font-family:'Inter Tight';font-weight:800;font-size:26px;padding:12px 14px;border:1.5px solid var(--line);border-radius:11px;background:#fff;color:var(--graphite)}
+  .bigInput:focus{outline:none;border-color:var(--sage)}
+  .slider-wrap{display:flex;align-items:center;gap:14px}
+  input[type=range]{flex:1;accent-color:var(--sage)}
+  .pct{font-family:'Inter Tight';font-weight:800;font-size:24px;min-width:74px;text-align:right}
+
+  .result-hero{background:linear-gradient(135deg,var(--graphite),#2c3a4d);color:var(--paper);border-radius:14px;padding:20px;margin-bottom:16px}
+  .result-hero .lbl{font-size:12px;opacity:.75;font-weight:500;letter-spacing:.02em}
+  .result-hero .val{font-family:'Inter Tight';font-weight:800;font-size:36px;line-height:1.1;margin-top:2px}
+  .result-hero .val small{font-size:18px;opacity:.6}
+
+  .kpis{display:grid;grid-template-columns:1fr 1fr;gap:11px;margin-bottom:8px}
+  .kpi{background:#faf7f3;border:1px solid var(--line);border-radius:11px;padding:13px 14px}
+  .kpi .lbl{font-size:11.5px;color:var(--muted);font-weight:500}
+  .kpi .val{font-family:'Inter Tight';font-weight:800;font-size:20px;margin-top:2px}
+  .kpi.good .val{color:var(--success)} .kpi.bad .val{color:var(--danger)} .kpi.warn .val{color:var(--warning)}
+
+  /* Decomposition bar */
+  .decomp{margin:18px 0 6px}
+  .decomp .bar{display:flex;height:38px;border-radius:9px;overflow:hidden;border:1px solid var(--line)}
+  .decomp .seg{display:flex;align-items:center;justify-content:center;font-size:11.5px;font-weight:700;font-family:'Inter Tight';color:#fff;min-width:0;white-space:nowrap;overflow:hidden}
+  .seg.cost{background:var(--sage)} .seg.marge{background:var(--peach);color:var(--graphite)}
+  .decomp .leg{display:flex;justify-content:space-between;font-size:11.5px;color:var(--muted);margin-top:6px}
+
+  /* Pedago panel */
+  .pedago{background:#fff;border:1px dashed var(--sage);border-radius:14px;padding:18px 20px;margin-top:22px}
+  .pedago h3{font-size:14.5px;color:var(--sage-deep);display:flex;align-items:center;gap:7px;margin-bottom:12px}
+  .compare{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media(max-width:560px){.compare{grid-template-columns:1fr}}
+  .cbox{border:1px solid var(--line);border-radius:11px;padding:14px}
+  .cbox.right{border-color:var(--success);background:#f3faf6}
+  .cbox.wrong{border-color:var(--danger);background:#fdf3f1}
+  .cbox .t{font-size:12px;font-weight:700;display:flex;align-items:center;gap:6px;margin-bottom:8px}
+  .cbox .formula{font-family:'Inter Tight';font-weight:700;font-size:13px;color:var(--graphite);background:rgba(0,0,0,.04);padding:6px 9px;border-radius:7px;display:inline-block;margin-bottom:10px}
+  .cbox .prow{display:flex;justify-content:space-between;align-items:baseline;font-size:12.5px;color:var(--muted);padding:3px 0}
+  .cbox .prow b{font-family:'Inter Tight';font-weight:800;font-size:18px;color:var(--graphite)}
+  .cbox .verdict{margin-top:9px;font-family:'Inter Tight';font-weight:700;font-size:14px;padding:6px 10px;border-radius:8px;text-align:center}
+  .cbox .verdict.ok{background:#e2f3ea;color:var(--success)}
+  .cbox .verdict.ko{background:#f9e4e0;color:var(--danger)}
+  .pedago-intro{font-size:13px;color:var(--graphite);margin-bottom:14px}
+  .pedago-reverse{margin-top:18px;border-top:1px solid var(--line);padding-top:16px}
+  .rev-title{font-size:13.5px;color:var(--sage-deep);margin-bottom:8px}
+  .revgrid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:6px}
+  @media(max-width:560px){.revgrid{grid-template-columns:1fr}}
+  .revbox{border:1px solid var(--line);border-radius:11px;padding:13px 14px;background:#f7faf8}
+  .revbox .rl{font-size:12px;color:var(--muted);font-weight:600}
+  .revbox .rf{font-family:'Inter Tight';font-weight:700;font-size:12.5px;background:rgba(0,0,0,.04);padding:4px 8px;border-radius:6px;display:inline-block;margin:6px 0}
+  .revbox .rv{font-family:'Inter Tight';font-weight:800;font-size:20px}
+  .rev-note{font-size:12px;color:var(--muted);margin-top:10px}
+  .verdict-line{margin-top:14px;font-family:'Inter Tight';font-weight:700;font-size:15px;padding:11px 14px;border-radius:10px;text-align:center}
+  .verdict-line.ok{background:#e2f3ea;color:var(--success)}
+  .verdict-line.ko{background:#f9e4e0;color:var(--danger)}
+  .verdict-line.neutral{background:#f0ece6;color:var(--muted)}
+  .trap{margin-top:14px;background:#fef6e7;border:1px solid #f0d99a;border-radius:10px;padding:12px 14px;font-size:12.5px;color:#7a5b08}
+  .trap b{color:var(--warning)}
+
+  /* Saved dossiers */
+  .saved{margin-top:22px}
+  .saved-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:11px;margin-top:12px}
+  .saved-item{border:1px solid var(--line);border-radius:11px;padding:13px 14px;background:#fff;cursor:pointer;transition:.12s}
+  .saved-item:hover{border-color:var(--graphite);box-shadow:var(--shadow)}
+  .saved-item .n{font-family:'Inter Tight';font-weight:700;font-size:14px;margin-bottom:3px}
+  .saved-item .m{font-size:11.5px;color:var(--muted);display:flex;justify-content:space-between;gap:8px;margin-top:6px}
+  .saved-item .pill{font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:20px;background:#e3efe3;color:var(--sage-deep)}
+  .saved-empty{color:var(--muted);font-size:13px;padding:8px 0}
+
+  .status{position:fixed;bottom:18px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--graphite);color:var(--paper);padding:11px 20px;border-radius:30px;font-size:13.5px;font-weight:600;box-shadow:0 8px 30px rgba(0,0,0,.25);transition:.25s;z-index:50}
+  .status.show{transform:translateX(-50%) translateY(0)}
+  .conn{font-size:11px;font-weight:600;padding:3px 9px;border-radius:20px}
+  .conn.shared{background:#e3efe3;color:var(--sage-deep)} .conn.local{background:#fdeee4;color:#a35a32}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <div class="logo">K</div>
+      <div>
+        <h1>KAOMA Marge</h1>
+        <div class="sub">Du prix d'achat au prix de vente — sans se tromper · <span id="connBadge" class="conn local">mode local</span></div>
+      </div>
+    </div>
+    <div class="dossier-bar">
+      <input id="dossierName" type="text" placeholder="Nom du dossier (ex. Boutique Quadro)">
+      <button class="btn primary" onclick="saveDossier()">💾 Enregistrer</button>
+      <button class="btn ghost" onclick="newDossier()">＋ Nouveau</button>
+    </div>
+  </header>
+
+  <div class="modebar">
+    <button id="mA" class="active" onclick="setMode('A')">
+      Du PDR → au PDV
+      <small>J'ai mon prix de revient, à quel prix vendre&nbsp;?</small>
+    </button>
+    <button id="mB" onclick="setMode('B')">
+      Du PDV → à la marge
+      <small>C'est déjà vendu, quelle marge je fais&nbsp;?</small>
+    </button>
+  </div>
+
+  <div class="grid">
+    <!-- LEFT : cost lines -->
+    <div class="card">
+      <h2>🧱 Prix de revient (PDR) — débours réel</h2>
+      <div class="hint">Tout ce que le dossier coûte vraiment : sous-traitance, fabrication interne, pose, transport, matière, BE, gruttage… Tape les montants en € HT. Le total = ton PDR.</div>
+      <table>
+        <thead>
+          <tr><th>Poste</th><th>Type</th><th class="r">Montant € HT</th><th></th></tr>
+        </thead>
+        <tbody id="lines"></tbody>
+        <tfoot>
+          <tr class="total-row"><td colspan="2">Total — Prix de revient (PDR)</td><td class="r" id="totalCost">0 €</td><td></td></tr>
+        </tfoot>
+      </table>
+      <div class="addline">
+        <button class="btn sm" onclick="addLine('Sous-traitance','externe')">+ Sous-traitance</button>
+        <button class="btn sm" onclick="addLine('Fabrication interne','interne')">+ Fab interne</button>
+        <button class="btn sm" onclick="addLine('Pose','externe')">+ Pose</button>
+        <button class="btn sm" onclick="addLine('Transport','externe')">+ Transport</button>
+        <button class="btn sm" onclick="addLine('Matière','externe')">+ Matière</button>
+        <button class="btn sm" onclick="addLine('Bureau d\'études','interne')">+ BE</button>
+        <button class="btn sm" onclick="addLine('Gruttage / livraison étages','externe')">+ Gruttage</button>
+        <button class="btn sm" onclick="addLine('Rétrocession archi','externe')">+ Rétro archi</button>
+        <button class="btn sm" onclick="addLine('','externe')">+ Ligne libre</button>
+      </div>
+    </div>
+
+    <!-- RIGHT : inputs + results -->
+    <div class="card" id="panel">
+      <!-- MODE A -->
+      <div id="paneA">
+        <h2>🎯 Marge cible</h2>
+        <div class="hint">Quel pourcentage de marge veux-tu garder sur le prix de vente&nbsp;?</div>
+        <div class="field">
+          <div class="slider-wrap">
+            <input id="targetA" type="range" min="0" max="80" step="1" value="40" oninput="render()">
+            <span class="pct"><span id="targetApct">40</span>%</span>
+          </div>
+        </div>
+        <div class="result-hero">
+          <div class="lbl">Prix de vente (PDV) conseillé — HT</div>
+          <div class="val" id="aPV">0 <small>€</small></div>
+        </div>
+        <div class="kpis">
+          <div class="kpi good"><div class="lbl">Marge dégagée</div><div class="val" id="aMarge">0 €</div></div>
+          <div class="kpi"><div class="lbl">Coefficient sur PDR</div><div class="val" id="aCoef">×0</div></div>
+        </div>
+      </div>
+
+      <!-- MODE B -->
+      <div id="paneB" style="display:none">
+        <h2>💶 Prix de vente (PDV)</h2>
+        <div class="hint">Le prix HT auquel le dossier est (ou sera) vendu au client.</div>
+        <div class="field">
+          <label for="pvB">Prix de vente (PDV) — HT</label>
+          <input id="pvB" class="bigInput" type="text" inputmode="decimal" placeholder="0" oninput="render()">
+        </div>
+        <div class="result-hero">
+          <div class="lbl">Marge réelle dégagée</div>
+          <div class="val" id="bMarge">0 <small>€</small></div>
+        </div>
+        <div class="kpis">
+          <div class="kpi"><div class="lbl">Taux de marge réel</div><div class="val" id="bTaux">0 %</div></div>
+          <div class="kpi"><div class="lbl">Coefficient sur PDR</div><div class="val" id="bCoef">×0</div></div>
+        </div>
+        <div class="field" style="margin-top:16px">
+          <label>Comparaison à ton objectif <span id="bObjpct">40</span>% &nbsp;
+            <input id="targetB" type="range" min="0" max="80" step="1" value="40" oninput="render()" style="vertical-align:middle;width:120px;accent-color:var(--sage)">
+          </label>
+          <div class="kpis" style="margin-top:6px">
+            <div class="kpi"><div class="lbl">PDR max pour tenir l'objectif</div><div class="val" id="bBudget">0 €</div></div>
+            <div class="kpi" id="bEcartBox"><div class="lbl" id="bEcartLbl">Écart vs PDR réel</div><div class="val" id="bEcart">0 €</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Decomposition bar (shared) -->
+      <div class="decomp">
+        <div class="eyebrow" style="margin-bottom:7px">Décomposition du prix de vente</div>
+        <div class="bar">
+          <div class="seg cost" id="segCost">PDR</div>
+          <div class="seg marge" id="segMarge">Marge</div>
+        </div>
+        <div class="leg"><span id="legCost">PDR 0 €</span><span id="legMarge">Marge 0 €</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PEDAGO -->
+  <div class="pedago">
+    <h3 id="pedH3">📚 Pour 40% de marge : on DIVISE le PDR, on ne multiplie pas</h3>
+
+    <div class="pedago-intro" id="pedagoIntro">Exemple avec ton PDR de <b>0 €</b> et une marge visée de <b>40%</b> :</div>
+    <div class="compare">
+      <div class="cbox right">
+        <div class="t">✅ BONNE MÉTHODE — diviser</div>
+        <div class="formula" id="fRight">PDR ÷ 0,60</div>
+        <div class="prow"><span>Prix de vente conseillé</span><b id="rPV">0 €</b></div>
+        <div class="prow"><span>Marge</span><b id="rMarge">0 €</b></div>
+        <div class="verdict ok" id="rVerdict">= 40,0% du PDV ✓</div>
+      </div>
+      <div class="cbox wrong">
+        <div class="t">❌ ERREUR FRÉQUENTE — multiplier</div>
+        <div class="formula" id="fWrong">PDR × 1,40</div>
+        <div class="prow"><span>Prix de vente</span><b id="wPV">0 €</b></div>
+        <div class="prow"><span>Marge</span><b id="wMarge">0 €</b></div>
+        <div class="verdict ko" id="wVerdict">= 28,6% du PDV ✗</div>
+      </div>
+    </div>
+    <div class="trap" id="trapLine">
+      <b>⚡ À retenir :</b> en multipliant le PDR par 1,40 au lieu de le diviser par 0,60, tu vends trop bas et tu <b>perds de la marge sur le dossier</b>.
+    </div>
+
+    <div class="pedago-reverse">
+      <h4 class="rev-title">🔄 Et dans l'autre sens : je pars du prix de vente (PDV)</h4>
+      <div class="pedago-intro" id="revIntro">On part de ton PDV de <b>0 €</b> :</div>
+      <div class="revgrid">
+        <div class="revbox"><div class="rl">Ma marge</div><div class="rf">PDV − PDR</div><div class="rv" id="revMargeE">0 €</div></div>
+        <div class="revbox"><div class="rl" id="revL2">PDR max pour tenir 40%</div><div class="rf" id="revF2">PDV × 0,60</div><div class="rv" id="revPDRmax">0 €</div></div>
+      </div>
+      <div class="rev-note" id="revNote">Ta marge = prix de vente − prix de revient. Tant que ton PDR réel reste sous le PDR max, tu fais plus que ton objectif de marge.</div>
+    </div>
+  </div>
+
+  <!-- SAVED -->
+  <div class="card saved">
+    <h2>🗂️ Dossiers enregistrés <span class="eyebrow" id="savedScope">(base partagée)</span></h2>
+    <div class="hint">Visibles par toute l'équipe — Romain, Loanah, Emeric… Clique pour rouvrir un dossier.</div>
+    <div class="saved-list" id="savedList"></div>
+  </div>
+</div>
+
+<div class="status" id="status"></div>
+
+<script>
+/* ---------- Helpers ---------- */
+const EUR = new Intl.NumberFormat('fr-FR',{style:'currency',currency:'EUR',maximumFractionDigits:0});
+const NUM = new Intl.NumberFormat('fr-FR',{maximumFractionDigits:0});
+const $ = id => document.getElementById(id);
+const parseNum = v => { if(typeof v==='number')return v; const n=parseFloat(String(v||'').replace(/\s/g,'').replace(/ /g,'').replace(',','.').replace(/[^\d.\-]/g,'')); return isNaN(n)?0:n; };
+
+let mode='A';
+let lines=[]; // {label, type, amount}
+
+/* ---------- Cost lines ---------- */
+function defaultLines(){
+  return [
+    {label:'Bureau d\'études', type:'interne', amount:0},
+    {label:'Transport', type:'externe', amount:0},
+    {label:'Pose', type:'externe', amount:0},
+    {label:'Sous-traitance', type:'externe', amount:0},
+    {label:'Fabrication interne', type:'interne', amount:0},
+    {label:'Matière', type:'externe', amount:0},
+  ];
+}
+function renderLines(){
+  const tb=$('lines'); tb.innerHTML='';
+  lines.forEach((l,i)=>{
+    const tr=document.createElement('tr'); tr.className='line-row';
+    tr.innerHTML=`
+      <td><input type="text" value="${escapeHtml(l.label)}" placeholder="Nom du poste…" oninput="updLine(${i},'label',this.value)"></td>
+      <td><button class="tag ${l.type}" onclick="toggleType(${i})" title="Cliquer pour basculer interne/externe">${l.type}</button></td>
+      <td class="r"><input class="amt" type="text" inputmode="decimal" value="${l.amount?NUM.format(l.amount):''}" placeholder="0" oninput="updLine(${i},'amount',this.value)" onblur="fmtAmt(${i},this)"></td>
+      <td class="r"><button class="del" onclick="delLine(${i})" title="Supprimer">×</button></td>`;
+    tb.appendChild(tr);
+  });
+}
+function escapeHtml(s){return String(s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+function addLine(label,type){ lines.push({label:label||'',type:type||'externe',amount:0}); renderLines(); render(); }
+function delLine(i){ lines.splice(i,1); renderLines(); render(); }
+function updLine(i,k,v){ lines[i][k]= k==='amount'?parseNum(v):v; render(); }
+function fmtAmt(i,el){ el.value = lines[i].amount? NUM.format(lines[i].amount):''; }
+function toggleType(i){ lines[i].type = lines[i].type==='interne'?'externe':'interne'; renderLines(); render(); }
+function totalCost(){ return lines.reduce((s,l)=>s+(l.amount||0),0); }
+
+/* ---------- Mode ---------- */
+function setMode(m){
+  mode=m;
+  $('mA').classList.toggle('active',m==='A');
+  $('mB').classList.toggle('active',m==='B');
+  $('paneA').style.display = m==='A'?'block':'none';
+  $('paneB').style.display = m==='B'?'block':'none';
+  render();
+}
+
+/* ---------- Core render ---------- */
+function render(){
+  const D = totalCost();
+  $('totalCost').textContent = EUR.format(D);
+
+  // targets reflected
+  const tA = parseNum($('targetA').value)/100;
+  $('targetApct').textContent = Math.round(tA*100);
+  const tB = parseNum($('targetB').value)/100;
+  $('bObjpct').textContent = Math.round(tB*100);
+
+  let PV, marge, taux;
+
+  if(mode==='A'){
+    const t = Math.min(tA,0.999);
+    PV = t<1 ? D/(1-t) : 0;
+    marge = PV - D;
+    taux = t;
+    $('aPV').innerHTML = NUM.format(Math.round(PV))+' <small>€</small>';
+    $('aMarge').textContent = EUR.format(Math.round(marge));
+    $('aCoef').textContent = D>0 ? '×'+(PV/D).toFixed(3).replace('.',',') : '×0';
+  } else {
+    PV = parseNum($('pvB').value);
+    marge = PV - D;
+    taux = PV>0 ? marge/PV : 0;
+    $('bMarge').innerHTML = NUM.format(Math.round(marge))+' <small>€</small>';
+    $('bTaux').textContent = (taux*100).toFixed(1).replace('.',',')+' %';
+    $('bCoef').textContent = D>0 ? '×'+(PV/D).toFixed(3).replace('.',',') : '×0';
+    // budget vs réel (logique velleda)
+    const budget = PV*(1-tB);
+    const ecart = budget - D; // positif = sous budget = marge bonus
+    $('bBudget').textContent = EUR.format(Math.round(budget));
+    $('bEcart').textContent = (ecart>=0?'+':'')+EUR.format(Math.round(ecart));
+    $('bEcartLbl').textContent = ecart>=0 ? 'Sous budget (marge bonus)' : 'Dépassement budget';
+    $('bEcartBox').className = 'kpi '+(ecart>=0?'good':'bad');
+    // color margin kpi
+  }
+
+  // hero margin color in B
+  if(mode==='B'){
+    const heroGood = marge>=0;
+    $('bMarge').parentElement.style.opacity=1;
+  }
+
+  // Decomposition bar
+  const safePV = PV>0?PV:0;
+  const costPct = safePV>0 ? Math.max(0,Math.min(100, D/safePV*100)) : (D>0?100:0);
+  const margePct = 100-costPct;
+  $('segCost').style.flexBasis = costPct+'%';
+  $('segMarge').style.flexBasis = margePct+'%';
+  $('segCost').textContent = costPct>14 ? 'Coût '+Math.round(costPct)+'%' : '';
+  $('segMarge').textContent = margePct>14 ? 'Marge '+Math.round(margePct)+'%' : '';
+  $('legCost').textContent = 'Coût '+EUR.format(Math.round(D));
+  $('legMarge').textContent = 'Marge '+EUR.format(Math.round(marge||0));
+
+  // ---- PEDAGO : 2 blocs empilés (leçon diviser/multiplier + je pars du PDV) ----
+  const t = mode==='A'? Math.min(tA,0.999) : tB;     // taux objectif du mode courant
+  const pct = Math.round(t*100);
+  const dec = (1-t).toFixed(2).replace('.',',');     // ex 0,60
+  const mult = (1+t).toFixed(2).replace('.',',');    // ex 1,40
+  $('pedH3').textContent = `📚 Pour ${pct}% de marge : on DIVISE le PDR, on ne multiplie pas`;
+
+  // BLOC 1 — à quel prix vendre : diviser vs multiplier
+  const rightPV = t<1 ? D/(1-t) : 0, rightMarge = rightPV - D;
+  const wrongPV = D*(1+t), wrongMarge = wrongPV - D, wrongRate = wrongPV>0 ? wrongMarge/wrongPV : 0;
+  const perte = rightPV - wrongPV;
+  $('pedagoIntro').innerHTML = `Exemple avec ton PDR de <b>${EUR.format(Math.round(D))}</b> et une marge visée de <b>${pct}%</b> :`;
+  $('fRight').textContent = `PDR ÷ ${dec}`;
+  $('rPV').textContent = EUR.format(Math.round(rightPV));
+  $('rMarge').textContent = EUR.format(Math.round(rightMarge));
+  $('rVerdict').textContent = `= ${(t*100).toFixed(1).replace('.',',')}% du PDV ✓`;
+  $('fWrong').textContent = `PDR × ${mult}`;
+  $('wPV').textContent = EUR.format(Math.round(wrongPV));
+  $('wMarge').textContent = EUR.format(Math.round(wrongMarge));
+  $('wVerdict').textContent = `= ${(wrongRate*100).toFixed(1).replace('.',',')}% du PDV ✗`;
+  $('trapLine').innerHTML = `<b>⚡ À retenir :</b> en multipliant le PDR par ${mult} au lieu de le diviser par ${dec}, tu vends <b>${EUR.format(Math.round(perte))}</b> trop bas — c'est <b>${EUR.format(Math.round(perte))} de marge perdue</b>. Pour ${pct}% : <b>PDR ÷ ${dec}</b> (= ×${t<1?(1/(1-t)).toFixed(3).replace('.',','):'∞'}).`;
+
+  // BLOC 2 — je pars du PDV : on prend TON PDV réel (qui change) si saisi, sinon le PDV conseillé
+  const pvSaisi = parseNum($('pvB').value);
+  let pdvRef, pdvSrc;
+  if(mode==='B' && pvSaisi>0){ pdvRef = pvSaisi; pdvSrc = 'ton PDV saisi'; }
+  else { pdvRef = rightPV; pdvSrc = 'le PDV conseillé'; }
+  const margeRef = pdvRef - D;
+  const tauxRef = pdvRef>0 ? margeRef/pdvRef : 0;
+  const pdrMax = pdvRef*(1-t);
+  $('revIntro').innerHTML = `On part de <b>${pdvSrc}</b> de <b>${EUR.format(Math.round(pdvRef))}</b> :`;
+  $('revMargeE').textContent = EUR.format(Math.round(margeRef));
+  $('revL2').textContent = `PDR max pour tenir ${pct}%`;
+  $('revF2').textContent = `PDV × ${dec}`;
+  $('revPDRmax').textContent = EUR.format(Math.round(pdrMax));
+  $('revNote').innerHTML = `Ta marge = <b>${EUR.format(Math.round(pdvRef))} − ${EUR.format(Math.round(D))} = ${EUR.format(Math.round(margeRef))}</b>, soit <b>${(tauxRef*100).toFixed(1).replace('.',',')}%</b> du PDV. Tant que ton PDR réel reste sous <b>${EUR.format(Math.round(pdrMax))}</b>, tu dépasses ${pct}% de marge.`;
+}
+
+/* ---------- Persistence (shared API + local fallback) ---------- */
+let API_OK=false;
+async function checkApi(){
+  try{
+    const r=await fetch('/api/dossiers',{method:'GET'});
+    if(r.ok){ API_OK=true; }
+  }catch(e){ API_OK=false; }
+  $('connBadge').textContent = API_OK?'base partagée':'mode local';
+  $('connBadge').className = 'conn '+(API_OK?'shared':'local');
+  $('savedScope').textContent = API_OK?'(base partagée — toute l\'équipe)':'(local — ce navigateur)';
+  loadList();
+}
+function localGet(){ try{return JSON.parse(localStorage.getItem('kaoma_marge')||'[]');}catch(e){return [];} }
+function localSet(a){ localStorage.setItem('kaoma_marge',JSON.stringify(a)); }
+
+function currentState(){
+  return {
+    name: $('dossierName').value.trim() || 'Sans nom',
+    mode, lines: JSON.parse(JSON.stringify(lines)),
+    targetA: $('targetA').value, targetB: $('targetB').value,
+    pvB: $('pvB').value,
+    updated: new Date().toISOString()
+  };
+}
+async function saveDossier(){
+  const st=currentState();
+  st.id = window._curId || ('d_'+Date.now());
+  window._curId = st.id;
+  if(API_OK){
+    try{
+      await fetch('/api/dossiers',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(st)});
+    }catch(e){ toast('Erreur réseau — enregistré en local'); saveLocal(st); return loadList(); }
+  } else { saveLocal(st); }
+  toast('💾 « '+st.name+' » enregistré'); loadList();
+}
+function saveLocal(st){ const a=localGet().filter(d=>d.id!==st.id); a.unshift(st); localSet(a); }
+
+async function loadList(){
+  let arr=[];
+  if(API_OK){ try{ const r=await fetch('/api/dossiers'); arr=await r.json(); }catch(e){ arr=localGet(); } }
+  else arr=localGet();
+  arr.sort((a,b)=>(b.updated||'').localeCompare(a.updated||''));
+  const el=$('savedList');
+  if(!arr.length){ el.innerHTML='<div class="saved-empty">Aucun dossier enregistré pour le moment.</div>'; return; }
+  el.innerHTML='';
+  arr.forEach(d=>{
+    const D=(d.lines||[]).reduce((s,l)=>s+(l.amount||0),0);
+    let pv=0,marge=0,taux=0;
+    if(d.mode==='A'){ const t=parseNum(d.targetA)/100; pv=t<1?D/(1-t):0; marge=pv-D; taux=t; }
+    else { pv=parseNum(d.pvB); marge=pv-D; taux=pv>0?marge/pv:0; }
+    const div=document.createElement('div'); div.className='saved-item';
+    div.innerHTML=`<div class="n">${escapeHtml(d.name)}</div>
+      <div class="m"><span>PV ${EUR.format(Math.round(pv))}</span><span class="pill">${(taux*100).toFixed(0)}% marge</span></div>
+      <div class="m"><span>Coût ${EUR.format(Math.round(D))}</span>
+        <button class="btn sm danger" onclick="event.stopPropagation();delDossier('${d.id}')">Suppr.</button></div>`;
+    div.onclick=()=>openDossier(d);
+    el.appendChild(div);
+  });
+}
+function openDossier(d){
+  window._curId=d.id;
+  $('dossierName').value=d.name==='Sans nom'?'':d.name;
+  lines=JSON.parse(JSON.stringify(d.lines||defaultLines()));
+  $('targetA').value=d.targetA||40; $('targetB').value=d.targetB||40; $('pvB').value=d.pvB||'';
+  setMode(d.mode||'A'); renderLines(); render();
+  toast('📂 « '+d.name+' » ouvert');
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+async function delDossier(id){
+  if(!confirm('Supprimer ce dossier ?'))return;
+  if(API_OK){ try{ await fetch('/api/dossiers?id='+encodeURIComponent(id),{method:'DELETE'}); }catch(e){} }
+  else { localSet(localGet().filter(d=>d.id!==id)); }
+  if(window._curId===id) window._curId=null;
+  loadList(); toast('Dossier supprimé');
+}
+function newDossier(){
+  window._curId=null;
+  $('dossierName').value=''; $('pvB').value=''; $('targetA').value=40; $('targetB').value=40;
+  lines=defaultLines(); setMode('A'); renderLines(); render();
+  toast('Nouveau dossier');
+}
+
+/* ---------- Toast ---------- */
+let _tt;
+function toast(m){ const s=$('status'); s.textContent=m; s.classList.add('show'); clearTimeout(_tt); _tt=setTimeout(()=>s.classList.remove('show'),2400); }
+
+/* ---------- Init ---------- */
+lines=defaultLines();
+renderLines(); render(); checkApi();
+</script>
+</body>
+</html>
