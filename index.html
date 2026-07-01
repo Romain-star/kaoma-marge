@@ -144,6 +144,8 @@
   .status.show{transform:translateX(-50%) translateY(0)}
   .conn{font-size:11px;font-weight:600;padding:3px 9px;border-radius:20px}
   .conn.shared{background:#e3efe3;color:var(--sage-deep)} .conn.local{background:#fdeee4;color:#a35a32}
+  .savest{font-size:12px;font-weight:600;white-space:nowrap}
+  .savest.ok{color:var(--success)} .savest.warn{color:var(--warning)} .savest.muted{color:var(--muted)}
 
   /* Main-d'œuvre (MO) */
   .mo{margin-top:18px;border-top:1px dashed var(--line);padding-top:16px}
@@ -187,9 +189,9 @@
       </div>
     </div>
     <div class="dossier-bar">
-      <input id="dossierName" type="text" placeholder="Nom du dossier (ex. Boutique Quadro)">
-      <button class="btn primary" onclick="saveDossier()">💾 Enregistrer</button>
+      <input id="dossierName" type="text" placeholder="Nom du dossier (ex. Boutique Quadro)" oninput="render()">
       <button class="btn ghost" onclick="newDossier()">＋ Nouveau</button>
+      <span id="saveStatus" class="savest"></span>
     </div>
   </header>
 
@@ -381,6 +383,8 @@ let mode='A';
 let lines=[]; // {label, type, amount}
 let moMode='vente';        // 'vente' = coût+taux de vente · 'marge' = coût+marge %
 let moLines=[];            // main-d'œuvre : {label, hours, cout, vente, marge}
+let suppressAutosave=false; // vrai pendant les chargements programmatiques (pas d'autosave)
+let _autosaveT;
 
 /* ---------- Cost lines ---------- */
 function defaultLines(){
@@ -575,10 +579,49 @@ function render(){
   $('revF2').textContent = `PDV × ${dec}`;
   $('revPDRmax').textContent = EUR.format(Math.round(pdrMax));
   $('revNote').innerHTML = `Ta marge = <b>${EUR.format(Math.round(pdvRef))} − ${EUR.format(Math.round(D))} = ${EUR.format(Math.round(margeRef))}</b>, soit <b>${(tauxRef*100).toFixed(1).replace('.',',')}%</b> du PDV. Tant que ton PDR réel reste sous <b>${EUR.format(Math.round(pdrMax))}</b>, tu dépasses ${pct}% de marge.`;
+
+  if(!suppressAutosave) scheduleAutosave();
 }
 
 /* ---------- Persistence (shared API + local fallback) ---------- */
 let API_OK=false;
+
+/* ---------- Enregistrement automatique ---------- */
+function setSaveStatus(s){
+  const el=$('saveStatus'); if(!el) return;
+  const now=new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
+  const map={
+    idle:['',''],
+    unnamed:['✏️ Nomme le dossier → enregistrement auto','warn'],
+    pending:['Modifs en attente…','muted'],
+    saving:['Enregistrement…','muted'],
+    saved:['✓ Enregistré '+now,'ok'],
+    savedLocal:['✓ Enregistré en local '+now,'ok'],
+    uptodate:['✓ À jour','ok']
+  };
+  const [txt,cls]=map[s]||['',''];
+  el.textContent=txt; el.className='savest '+cls;
+}
+function scheduleAutosave(){
+  const name=$('dossierName').value.trim();
+  if(!name){ setSaveStatus('unnamed'); return; }
+  setSaveStatus('pending');
+  clearTimeout(_autosaveT);
+  _autosaveT=setTimeout(doAutosave, 1200); // sauvegarde 1,2 s après la dernière frappe
+}
+async function doAutosave(){
+  const name=$('dossierName').value.trim();
+  if(!name){ setSaveStatus('unnamed'); return; }
+  const st=currentState();
+  st.id = window._curId || ('d_'+Date.now());
+  window._curId = st.id;
+  setSaveStatus('saving');
+  try{
+    if(API_OK){ await fetch('/api/dossiers',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(st)}); }
+    else { saveLocal(st); }
+    setSaveStatus('saved'); loadList();
+  }catch(e){ saveLocal(st); setSaveStatus('savedLocal'); }
+}
 async function checkApi(){
   try{
     const r=await fetch('/api/dossiers',{method:'GET'});
@@ -641,6 +684,7 @@ async function loadList(){
   });
 }
 function openDossier(d){
+  suppressAutosave=true;
   window._curId=d.id;
   $('dossierName').value=d.name==='Sans nom'?'':d.name;
   lines=JSON.parse(JSON.stringify(d.lines||defaultLines()));
@@ -650,6 +694,7 @@ function openDossier(d){
   else { moLines=[defaultMoLine()]; moMode='vente'; }
   $('targetA').value=d.targetA||40; $('targetB').value=d.targetB||40; $('pvB').value=d.pvB||'';
   setMode(d.mode||'A'); renderLines(); setMoMode(moMode); render();
+  suppressAutosave=false; setSaveStatus('uptodate');
   toast('📂 « '+d.name+' » ouvert');
   window.scrollTo({top:0,behavior:'smooth'});
 }
@@ -661,10 +706,12 @@ async function delDossier(id){
   loadList(); toast('Dossier supprimé');
 }
 function newDossier(){
+  suppressAutosave=true;
   window._curId=null;
   $('dossierName').value=''; $('pvB').value=''; $('targetA').value=40; $('targetB').value=40;
   lines=defaultLines(); moLines=[defaultMoLine()]; moMode='vente';
   setMode('A'); renderLines(); setMoMode('vente'); render();
+  suppressAutosave=false; setSaveStatus('unnamed');
   toast('Nouveau dossier');
 }
 
@@ -674,7 +721,10 @@ function toast(m){ const s=$('status'); s.textContent=m; s.classList.add('show')
 
 /* ---------- Init ---------- */
 lines=defaultLines(); moLines=[defaultMoLine()];
-renderLines(); renderMoLines(); render(); checkApi();
+suppressAutosave=true;
+renderLines(); renderMoLines(); render();
+suppressAutosave=false;
+checkApi();
 </script>
 </body>
 </html>
