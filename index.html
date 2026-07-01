@@ -144,6 +144,27 @@
   .status.show{transform:translateX(-50%) translateY(0)}
   .conn{font-size:11px;font-weight:600;padding:3px 9px;border-radius:20px}
   .conn.shared{background:#e3efe3;color:var(--sage-deep)} .conn.local{background:#fdeee4;color:#a35a32}
+
+  /* Main-d'œuvre (MO) */
+  .mo{margin-top:18px;border-top:1px dashed var(--line);padding-top:16px}
+  .mo-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:4px}
+  .mo-head h3{font-size:14.5px;font-weight:700;display:flex;align-items:center;gap:7px}
+  .mo-modes{display:flex;background:#efe8e0;border-radius:9px;padding:3px;gap:3px}
+  .mo-modes button{border:0;background:transparent;font-family:'Inter';font-weight:600;font-size:11.5px;color:var(--muted);padding:6px 10px;border-radius:7px;cursor:pointer}
+  .mo-modes button.active{background:#fff;color:var(--graphite);box-shadow:var(--shadow)}
+  .mo-hint{font-size:12px;color:var(--muted);margin-bottom:12px}
+  .mo-inputs{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px}
+  @media(max-width:560px){.mo-inputs{grid-template-columns:1fr 1fr}}
+  .mo-inputs label{display:block;font-size:11.5px;font-weight:600;color:var(--muted);margin-bottom:4px}
+  .mo-inputs input{width:100%;border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:14px;font-family:'Inter Tight';font-weight:700;background:#fff}
+  .mo-inputs input:focus{outline:none;border-color:var(--sage)}
+  .mo-out{display:grid;grid-template-columns:repeat(4,1fr);gap:9px}
+  @media(max-width:560px){.mo-out{grid-template-columns:1fr 1fr}}
+  .mo-cell{background:#faf7f3;border:1px solid var(--line);border-radius:10px;padding:10px 11px}
+  .mo-cell span{font-size:11px;color:var(--muted);font-weight:500;display:block}
+  .mo-cell b{font-family:'Inter Tight';font-weight:800;font-size:16px;display:block;margin-top:2px}
+  .mo-cell.hi{background:#eef6f0;border-color:#bfe0cc}
+  .mo-cell.hi b{color:var(--success)}
 </style>
 </head>
 <body>
@@ -198,6 +219,30 @@
         <button class="btn sm" onclick="addLine('Gruttage / livraison étages','externe')">+ Gruttage</button>
         <button class="btn sm" onclick="addLine('Rétrocession archi','externe')">+ Rétro archi</button>
         <button class="btn sm" onclick="addLine('','externe')">+ Ligne libre</button>
+      </div>
+
+      <!-- Main-d'œuvre : marge calculée sur le VRAI coût de revient, pas le prix de vente -->
+      <div class="mo">
+        <div class="mo-head">
+          <h3>👷 Main-d'œuvre (heures)</h3>
+          <div class="mo-modes">
+            <button id="moMV" class="active" onclick="setMoMode('vente')">Coût + taux de vente</button>
+            <button id="moMM" onclick="setMoMode('marge')">Coût + marge %</button>
+          </div>
+        </div>
+        <div class="mo-hint">La MO entre dans le PDR à son <b>vrai coût de revient</b> (pas au prix de vente). Marge MO = (taux de vente − coût de revient) × heures.</div>
+        <div class="mo-inputs">
+          <div><label>Heures</label><input id="moHours" type="text" inputmode="decimal" placeholder="0" oninput="updMo('hours',this.value)"></div>
+          <div><label>Coût de revient €/h</label><input id="moCout" type="text" inputmode="decimal" value="40" oninput="updMo('cout',this.value)"></div>
+          <div id="moVenteWrap"><label>Taux de vente €/h</label><input id="moVente" type="text" inputmode="decimal" value="80" oninput="updMo('vente',this.value)"></div>
+          <div id="moMargeWrap" style="display:none"><label>Marge visée %</label><input id="moMarge" type="text" inputmode="decimal" value="50" oninput="updMo('marge',this.value)"></div>
+        </div>
+        <div class="mo-out">
+          <div class="mo-cell"><span>Coût MO → PDR</span><b id="moCoutOut">0 €</b></div>
+          <div class="mo-cell"><span>Taux de vente</span><b id="moVenteOut">0 €/h</b></div>
+          <div class="mo-cell"><span>Taux de marge MO</span><b id="moMargePctOut">0 %</b></div>
+          <div class="mo-cell hi"><span>Marge MO</span><b id="moMargeEurOut">0 €</b></div>
+        </div>
       </div>
     </div>
 
@@ -317,6 +362,7 @@ const parseNum = v => { if(typeof v==='number')return v; const n=parseFloat(Stri
 
 let mode='A';
 let lines=[]; // {label, type, amount}
+let mo = {hours:0, cout:40, mode:'vente', vente:80, marge:50}; // main-d'œuvre
 
 /* ---------- Cost lines ---------- */
 function defaultLines(){
@@ -347,7 +393,41 @@ function delLine(i){ lines.splice(i,1); renderLines(); render(); }
 function updLine(i,k,v){ lines[i][k]= k==='amount'?parseNum(v):v; render(); }
 function fmtAmt(i,el){ el.value = lines[i].amount? NUM.format(lines[i].amount):''; }
 function toggleType(i){ lines[i].type = lines[i].type==='interne'?'externe':'interne'; renderLines(); render(); }
-function totalCost(){ return lines.reduce((s,l)=>s+(l.amount||0),0); }
+function totalCost(){ return lines.reduce((s,l)=>s+(l.amount||0),0) + computeMO().coutMO; }
+
+/* ---------- Main-d'œuvre (MO) ---------- */
+const NUM2 = new Intl.NumberFormat('fr-FR',{maximumFractionDigits:2});
+function computeMO(){
+  const h=mo.hours||0, c=mo.cout||0;
+  let vente, margePct;
+  if(mo.mode==='marge'){ margePct=(mo.marge||0)/100; vente = margePct<1 ? c/(1-margePct) : 0; }
+  else { vente = mo.vente||0; margePct = vente>0 ? (vente-c)/vente : 0; }
+  const coutMO=c*h, venteMO=vente*h, margeMO=venteMO-coutMO;
+  return {h,c,vente,margePct,coutMO,venteMO,margeMO};
+}
+function updMo(k,v){ mo[k]=parseNum(v); render(); }
+function setMoMode(m){
+  mo.mode=m;
+  $('moMV').classList.toggle('active',m==='vente');
+  $('moMM').classList.toggle('active',m==='marge');
+  $('moVenteWrap').style.display = m==='vente'?'block':'none';
+  $('moMargeWrap').style.display = m==='marge'?'block':'none';
+  render();
+}
+function renderMoInputs(){
+  $('moHours').value = mo.hours? NUM2.format(mo.hours):'';
+  $('moCout').value  = mo.cout!=null? NUM2.format(mo.cout):'';
+  $('moVente').value = mo.vente!=null? NUM2.format(mo.vente):'';
+  $('moMarge').value = mo.marge!=null? NUM2.format(mo.marge):'';
+  setMoMode(mo.mode||'vente');
+}
+function renderMoOut(){
+  const r=computeMO();
+  $('moCoutOut').textContent   = EUR.format(Math.round(r.coutMO));
+  $('moVenteOut').textContent  = NUM2.format(r.vente)+' €/h';
+  $('moMargePctOut').textContent = (r.margePct*100).toFixed(1).replace('.',',')+' %';
+  $('moMargeEurOut').textContent = EUR.format(Math.round(r.margeMO));
+}
 
 /* ---------- Mode ---------- */
 function setMode(m){
@@ -363,6 +443,7 @@ function setMode(m){
 function render(){
   const D = totalCost();
   $('totalCost').textContent = EUR.format(D);
+  renderMoOut();
 
   // targets reflected
   const tA = parseNum($('targetA').value)/100;
@@ -471,6 +552,7 @@ function currentState(){
   return {
     name: $('dossierName').value.trim() || 'Sans nom',
     mode, lines: JSON.parse(JSON.stringify(lines)),
+    mo: JSON.parse(JSON.stringify(mo)),
     targetA: $('targetA').value, targetB: $('targetB').value,
     pvB: $('pvB').value,
     updated: new Date().toISOString()
@@ -498,7 +580,8 @@ async function loadList(){
   if(!arr.length){ el.innerHTML='<div class="saved-empty">Aucun dossier enregistré pour le moment.</div>'; return; }
   el.innerHTML='';
   arr.forEach(d=>{
-    const D=(d.lines||[]).reduce((s,l)=>s+(l.amount||0),0);
+    const moC = d.mo? (parseNum(d.mo.cout)*parseNum(d.mo.hours)) : 0;
+    const D=(d.lines||[]).reduce((s,l)=>s+(l.amount||0),0)+moC;
     let pv=0,marge=0,taux=0;
     if(d.mode==='A'){ const t=parseNum(d.targetA)/100; pv=t<1?D/(1-t):0; marge=pv-D; taux=t; }
     else { pv=parseNum(d.pvB); marge=pv-D; taux=pv>0?marge/pv:0; }
@@ -515,8 +598,9 @@ function openDossier(d){
   window._curId=d.id;
   $('dossierName').value=d.name==='Sans nom'?'':d.name;
   lines=JSON.parse(JSON.stringify(d.lines||defaultLines()));
+  mo=Object.assign({hours:0,cout:40,mode:'vente',vente:80,marge:50}, d.mo||{});
   $('targetA').value=d.targetA||40; $('targetB').value=d.targetB||40; $('pvB').value=d.pvB||'';
-  setMode(d.mode||'A'); renderLines(); render();
+  setMode(d.mode||'A'); renderLines(); renderMoInputs(); render();
   toast('📂 « '+d.name+' » ouvert');
   window.scrollTo({top:0,behavior:'smooth'});
 }
@@ -530,7 +614,8 @@ async function delDossier(id){
 function newDossier(){
   window._curId=null;
   $('dossierName').value=''; $('pvB').value=''; $('targetA').value=40; $('targetB').value=40;
-  lines=defaultLines(); setMode('A'); renderLines(); render();
+  lines=defaultLines(); mo={hours:0,cout:40,mode:'vente',vente:80,marge:50};
+  setMode('A'); renderLines(); renderMoInputs(); render();
   toast('Nouveau dossier');
 }
 
@@ -540,7 +625,7 @@ function toast(m){ const s=$('status'); s.textContent=m; s.classList.add('show')
 
 /* ---------- Init ---------- */
 lines=defaultLines();
-renderLines(); render(); checkApi();
+renderLines(); renderMoInputs(); render(); checkApi();
 </script>
 </body>
 </html>
