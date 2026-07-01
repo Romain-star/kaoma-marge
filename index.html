@@ -165,6 +165,15 @@
   .mo-cell b{font-family:'Inter Tight';font-weight:800;font-size:16px;display:block;margin-top:2px}
   .mo-cell.hi{background:#eef6f0;border-color:#bfe0cc}
   .mo-cell.hi b{color:var(--success)}
+  .mo-table{width:100%;border-collapse:collapse;margin-bottom:8px}
+  .mo-table th{font-size:10.5px;padding:0 6px 6px}
+  .mo-table td{padding:3px 4px}
+  .molabel{width:100%;border:1px solid transparent;border-radius:7px;padding:7px 8px;font-size:13px;background:transparent;font-family:'Inter'}
+  .molabel:hover{background:#faf7f3}
+  .molabel:focus{border-color:var(--line);background:#fff;outline:none}
+  .moamt{width:72px;text-align:right;border:1px solid var(--line);border-radius:8px;padding:7px 8px;font-size:13px;font-family:'Inter Tight';font-weight:700;background:#fff}
+  .moamt:focus{outline:none;border-color:var(--sage)}
+  .momarge{font-family:'Inter Tight';font-weight:700;font-size:13px;color:var(--sage-deep);white-space:nowrap;text-align:right}
 </style>
 </head>
 <body>
@@ -221,7 +230,7 @@
         <button class="btn sm" onclick="addLine('','externe')">+ Ligne libre</button>
       </div>
 
-      <!-- Main-d'œuvre : marge calculée sur le VRAI coût de revient, pas le prix de vente -->
+      <!-- Main-d'œuvre : plusieurs lignes, coût de revient réel dans le PDR + sous-total MO -->
       <div class="mo">
         <div class="mo-head">
           <h3>👷 Main-d'œuvre (heures)</h3>
@@ -230,18 +239,26 @@
             <button id="moMM" onclick="setMoMode('marge')">Coût + marge %</button>
           </div>
         </div>
-        <div class="mo-hint">La MO entre dans le PDR à son <b>vrai coût de revient</b> (pas au prix de vente). Marge MO = (taux de vente − coût de revient) × heures.</div>
-        <div class="mo-inputs">
-          <div><label>Heures</label><input id="moHours" type="text" inputmode="decimal" placeholder="0" oninput="updMo('hours',this.value)"></div>
-          <div><label>Coût de revient €/h</label><input id="moCout" type="text" inputmode="decimal" value="40" oninput="updMo('cout',this.value)"></div>
-          <div id="moVenteWrap"><label>Taux de vente €/h</label><input id="moVente" type="text" inputmode="decimal" value="80" oninput="updMo('vente',this.value)"></div>
-          <div id="moMargeWrap" style="display:none"><label>Marge visée %</label><input id="moMarge" type="text" inputmode="decimal" value="50" oninput="updMo('marge',this.value)"></div>
-        </div>
-        <div class="mo-out">
-          <div class="mo-cell"><span>Coût MO → PDR</span><b id="moCoutOut">0 €</b></div>
-          <div class="mo-cell"><span>Taux de vente</span><b id="moVenteOut">0 €/h</b></div>
-          <div class="mo-cell"><span>Taux de marge MO</span><b id="moMargePctOut">0 %</b></div>
+        <div class="mo-hint">La MO entre dans le PDR à son <b>vrai coût de revient</b> (pas au prix de vente). Ajoute une ligne par intervenant / atelier.</div>
+        <table class="mo-table">
+          <thead>
+            <tr>
+              <th>Intervenant</th>
+              <th class="r">Heures</th>
+              <th class="r">Coût €/h</th>
+              <th class="r" id="moCol4">Vente €/h</th>
+              <th class="r">Marge €</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="moLinesBody"></tbody>
+        </table>
+        <div class="addline"><button class="btn sm" onclick="addMoLine()">+ Ligne MO</button></div>
+        <div class="mo-out" style="margin-top:14px">
+          <div class="mo-cell"><span>PDR MO (coût → PDR)</span><b id="moPdrOut">0 €</b></div>
+          <div class="mo-cell"><span>PDV MO (vente)</span><b id="moPdvOut">0 €</b></div>
           <div class="mo-cell hi"><span>Marge MO</span><b id="moMargeEurOut">0 €</b></div>
+          <div class="mo-cell"><span>Taux de marge MO</span><b id="moMargePctOut">0 %</b></div>
         </div>
       </div>
     </div>
@@ -362,7 +379,8 @@ const parseNum = v => { if(typeof v==='number')return v; const n=parseFloat(Stri
 
 let mode='A';
 let lines=[]; // {label, type, amount}
-let mo = {hours:0, cout:40, mode:'vente', vente:80, marge:50}; // main-d'œuvre
+let moMode='vente';        // 'vente' = coût+taux de vente · 'marge' = coût+marge %
+let moLines=[];            // main-d'œuvre : {label, hours, cout, vente, marge}
 
 /* ---------- Cost lines ---------- */
 function defaultLines(){
@@ -393,40 +411,66 @@ function delLine(i){ lines.splice(i,1); renderLines(); render(); }
 function updLine(i,k,v){ lines[i][k]= k==='amount'?parseNum(v):v; render(); }
 function fmtAmt(i,el){ el.value = lines[i].amount? NUM.format(lines[i].amount):''; }
 function toggleType(i){ lines[i].type = lines[i].type==='interne'?'externe':'interne'; renderLines(); render(); }
-function totalCost(){ return lines.reduce((s,l)=>s+(l.amount||0),0) + computeMO().coutMO; }
+function totalCost(){ return lines.reduce((s,l)=>s+(l.amount||0),0) + moTotals().pdr; }
 
-/* ---------- Main-d'œuvre (MO) ---------- */
+/* ---------- Main-d'œuvre (MO) — plusieurs lignes ---------- */
 const NUM2 = new Intl.NumberFormat('fr-FR',{maximumFractionDigits:2});
-function computeMO(){
-  const h=mo.hours||0, c=mo.cout||0;
+function defaultMoLine(){ return {label:'', hours:0, cout:40, vente:80, marge:50}; }
+function computeMoLine(l){
+  const c=l.cout||0, h=l.hours||0;
   let vente, margePct;
-  if(mo.mode==='marge'){ margePct=(mo.marge||0)/100; vente = margePct<1 ? c/(1-margePct) : 0; }
-  else { vente = mo.vente||0; margePct = vente>0 ? (vente-c)/vente : 0; }
+  if(moMode==='marge'){ margePct=(l.marge||0)/100; vente = margePct<1 ? c/(1-margePct) : 0; }
+  else { vente = l.vente||0; margePct = vente>0 ? (vente-c)/vente : 0; }
   const coutMO=c*h, venteMO=vente*h, margeMO=venteMO-coutMO;
-  return {h,c,vente,margePct,coutMO,venteMO,margeMO};
+  return {vente,margePct,coutMO,venteMO,margeMO};
 }
-function updMo(k,v){ mo[k]=parseNum(v); render(); }
+function moTotals(){
+  let pdr=0, pdv=0;
+  moLines.forEach(l=>{ const r=computeMoLine(l); pdr+=r.coutMO; pdv+=r.venteMO; });
+  const marge=pdv-pdr, taux=pdv>0?marge/pdv:0;
+  return {pdr,pdv,marge,taux};
+}
+function renderMoLines(){
+  const tb=$('moLinesBody'); tb.innerHTML='';
+  moLines.forEach((l,i)=>{
+    const r=computeMoLine(l);
+    const col4 = moMode==='vente'
+      ? `<input class="moamt" type="text" inputmode="decimal" value="${l.vente!=null&&l.vente!==''?NUM2.format(l.vente):''}" placeholder="80" oninput="updMoLine(${i},'vente',this.value)">`
+      : `<input class="moamt" type="text" inputmode="decimal" value="${l.marge!=null&&l.marge!==''?NUM2.format(l.marge):''}" placeholder="50" oninput="updMoLine(${i},'marge',this.value)">`;
+    const tr=document.createElement('tr');
+    tr.innerHTML=`
+      <td><input class="molabel" type="text" value="${escapeHtml(l.label)}" placeholder="Ex. Pose chantier" oninput="updMoLine(${i},'label',this.value)"></td>
+      <td class="r"><input class="moamt" type="text" inputmode="decimal" value="${l.hours?NUM2.format(l.hours):''}" placeholder="0" oninput="updMoLine(${i},'hours',this.value)"></td>
+      <td class="r"><input class="moamt" type="text" inputmode="decimal" value="${l.cout!=null&&l.cout!==''?NUM2.format(l.cout):''}" placeholder="40" oninput="updMoLine(${i},'cout',this.value)"></td>
+      <td class="r">${col4}</td>
+      <td class="momarge" id="moMargeCell${i}">${EUR.format(Math.round(r.margeMO))}</td>
+      <td class="r"><button class="del" onclick="delMoLine(${i})" title="Supprimer">×</button></td>`;
+    tb.appendChild(tr);
+  });
+}
+function addMoLine(){ moLines.push(defaultMoLine()); renderMoLines(); render(); }
+function delMoLine(i){ moLines.splice(i,1); renderMoLines(); render(); }
+function updMoLine(i,k,v){
+  moLines[i][k] = (k==='label')? v : parseNum(v);
+  if(k!=='label'){
+    const c=$('moMargeCell'+i);
+    if(c) c.textContent = EUR.format(Math.round(computeMoLine(moLines[i]).margeMO));
+    render();
+  }
+}
 function setMoMode(m){
-  mo.mode=m;
+  moMode=m;
   $('moMV').classList.toggle('active',m==='vente');
   $('moMM').classList.toggle('active',m==='marge');
-  $('moVenteWrap').style.display = m==='vente'?'block':'none';
-  $('moMargeWrap').style.display = m==='marge'?'block':'none';
-  render();
-}
-function renderMoInputs(){
-  $('moHours').value = mo.hours? NUM2.format(mo.hours):'';
-  $('moCout').value  = mo.cout!=null? NUM2.format(mo.cout):'';
-  $('moVente').value = mo.vente!=null? NUM2.format(mo.vente):'';
-  $('moMarge').value = mo.marge!=null? NUM2.format(mo.marge):'';
-  setMoMode(mo.mode||'vente');
+  $('moCol4').textContent = m==='vente'?'Vente €/h':'Marge %';
+  renderMoLines(); render();
 }
 function renderMoOut(){
-  const r=computeMO();
-  $('moCoutOut').textContent   = EUR.format(Math.round(r.coutMO));
-  $('moVenteOut').textContent  = NUM2.format(r.vente)+' €/h';
-  $('moMargePctOut').textContent = (r.margePct*100).toFixed(1).replace('.',',')+' %';
-  $('moMargeEurOut').textContent = EUR.format(Math.round(r.margeMO));
+  const t=moTotals();
+  $('moPdrOut').textContent     = EUR.format(Math.round(t.pdr));
+  $('moPdvOut').textContent     = EUR.format(Math.round(t.pdv));
+  $('moMargeEurOut').textContent= EUR.format(Math.round(t.marge));
+  $('moMargePctOut').textContent= (t.taux*100).toFixed(1).replace('.',',')+' %';
 }
 
 /* ---------- Mode ---------- */
@@ -552,7 +596,7 @@ function currentState(){
   return {
     name: $('dossierName').value.trim() || 'Sans nom',
     mode, lines: JSON.parse(JSON.stringify(lines)),
-    mo: JSON.parse(JSON.stringify(mo)),
+    moLines: JSON.parse(JSON.stringify(moLines)), moMode,
     targetA: $('targetA').value, targetB: $('targetB').value,
     pvB: $('pvB').value,
     updated: new Date().toISOString()
@@ -580,7 +624,9 @@ async function loadList(){
   if(!arr.length){ el.innerHTML='<div class="saved-empty">Aucun dossier enregistré pour le moment.</div>'; return; }
   el.innerHTML='';
   arr.forEach(d=>{
-    const moC = d.mo? (parseNum(d.mo.cout)*parseNum(d.mo.hours)) : 0;
+    let moC = 0;
+    if(d.moLines){ d.moLines.forEach(l=>moC+=parseNum(l.cout)*parseNum(l.hours)); }
+    else if(d.mo){ moC = parseNum(d.mo.cout)*parseNum(d.mo.hours); }
     const D=(d.lines||[]).reduce((s,l)=>s+(l.amount||0),0)+moC;
     let pv=0,marge=0,taux=0;
     if(d.mode==='A'){ const t=parseNum(d.targetA)/100; pv=t<1?D/(1-t):0; marge=pv-D; taux=t; }
@@ -598,9 +644,12 @@ function openDossier(d){
   window._curId=d.id;
   $('dossierName').value=d.name==='Sans nom'?'':d.name;
   lines=JSON.parse(JSON.stringify(d.lines||defaultLines()));
-  mo=Object.assign({hours:0,cout:40,mode:'vente',vente:80,marge:50}, d.mo||{});
+  // MO : nouveau format multi-lignes, sinon migration de l'ancien format mono-ligne, sinon 1 ligne vide
+  if(d.moLines){ moLines=JSON.parse(JSON.stringify(d.moLines)); moMode=d.moMode||'vente'; }
+  else if(d.mo){ moLines=[{label:'Main-d\'œuvre',hours:d.mo.hours||0,cout:d.mo.cout!=null?d.mo.cout:40,vente:d.mo.vente!=null?d.mo.vente:80,marge:d.mo.marge!=null?d.mo.marge:50}]; moMode=d.mo.mode||'vente'; }
+  else { moLines=[defaultMoLine()]; moMode='vente'; }
   $('targetA').value=d.targetA||40; $('targetB').value=d.targetB||40; $('pvB').value=d.pvB||'';
-  setMode(d.mode||'A'); renderLines(); renderMoInputs(); render();
+  setMode(d.mode||'A'); renderLines(); setMoMode(moMode); render();
   toast('📂 « '+d.name+' » ouvert');
   window.scrollTo({top:0,behavior:'smooth'});
 }
@@ -614,8 +663,8 @@ async function delDossier(id){
 function newDossier(){
   window._curId=null;
   $('dossierName').value=''; $('pvB').value=''; $('targetA').value=40; $('targetB').value=40;
-  lines=defaultLines(); mo={hours:0,cout:40,mode:'vente',vente:80,marge:50};
-  setMode('A'); renderLines(); renderMoInputs(); render();
+  lines=defaultLines(); moLines=[defaultMoLine()]; moMode='vente';
+  setMode('A'); renderLines(); setMoMode('vente'); render();
   toast('Nouveau dossier');
 }
 
@@ -624,8 +673,8 @@ let _tt;
 function toast(m){ const s=$('status'); s.textContent=m; s.classList.add('show'); clearTimeout(_tt); _tt=setTimeout(()=>s.classList.remove('show'),2400); }
 
 /* ---------- Init ---------- */
-lines=defaultLines();
-renderLines(); renderMoInputs(); render(); checkApi();
+lines=defaultLines(); moLines=[defaultMoLine()];
+renderLines(); renderMoLines(); render(); checkApi();
 </script>
 </body>
 </html>
