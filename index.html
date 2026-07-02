@@ -166,6 +166,7 @@
   .mo-cell b{font-family:'Inter Tight';font-weight:800;font-size:16px;display:block;margin-top:2px}
   .mo-cell.hi{background:#eef6f0;border-color:#bfe0cc}
   .mo-cell.hi b{color:var(--success)}
+  .mo-cell.good b{color:var(--success)} .mo-cell.bad b{color:var(--danger)}
   .mo-table{width:100%;border-collapse:collapse;margin-bottom:8px}
   .mo-table th{font-size:10.5px;padding:0 6px 6px}
   .mo-table td{padding:3px 4px}
@@ -177,7 +178,8 @@
   .momarge{font-family:'Inter Tight';font-weight:700;font-size:13px;color:var(--sage-deep);white-space:nowrap;text-align:right}
   /* Articles ligne par ligne */
   .lines-wrap{overflow-x:auto}
-  .lines-wrap table{min-width:1040px}
+  .lines-wrap table{min-width:1260px}
+  .pvu{font-size:12px;color:var(--muted)}
   .line-row td:first-child input{min-width:150px}
   .line-row td, tr.grp th, thead tr:nth-child(2) th{white-space:nowrap}
   .lin{width:66px;text-align:right;border:1px solid var(--line);border-radius:8px;padding:7px 7px;font-size:13px;font-family:'Inter Tight';font-weight:700;background:#fff}
@@ -231,16 +233,19 @@
       <table>
         <thead>
           <tr class="grp">
-            <th colspan="6">🧱 FOURNITURE</th>
-            <th colspan="4" class="sepL">👷 POSE</th>
+            <th colspan="2"></th>
+            <th colspan="4">👷 POSE</th>
+            <th colspan="5" class="sepL">🧱 FOURNITURE</th>
+            <th class="sepL">TOTAL</th>
             <th class="sepL">MARCHÉ</th>
             <th></th>
           </tr>
           <tr>
             <th>Poste</th><th>Type</th>
-            <th class="r">Qté</th><th class="r">PU €</th><th class="r">Marge</th><th class="r">PV €</th>
-            <th class="r sepL">Temps h</th><th class="r">€/h</th><th class="r">Marge</th><th class="r">PV €</th>
-            <th class="r sepL">Prix marché</th><th></th>
+            <th class="r">Temps h</th><th class="r">€/h</th><th class="r">Marge</th><th class="r">PV €</th>
+            <th class="r sepL">Qté</th><th class="r">PU €</th><th class="r">Marge</th><th class="r">PV € total</th><th class="r">PV € / u</th>
+            <th class="r sepL">PV total ligne</th>
+            <th class="r sepL">Prix marché / u</th><th></th>
           </tr>
         </thead>
         <tbody id="lines"></tbody>
@@ -253,6 +258,12 @@
         <div class="mo-cell"><span>Taux de marge global</span><b id="ltTaux">0 %</b></div>
       </div>
       <div class="split-line">dont PV <b>fourniture</b> <span id="ltFpv">0 €</span> &nbsp;·&nbsp; PV <b>pose</b> <span id="ltPpv">0 €</span></div>
+      <div class="mo-out" style="margin-top:10px">
+        <div class="mo-cell"><span>🛒 Marché total estimé (avec pose)</span><b id="ltMkt">0 €</b></div>
+        <div class="mo-cell"><span>Marge si tu vends au prix marché</span><b id="ltMktMarge">0 %</b></div>
+        <div class="mo-cell"><span>Écart ton PV − marché</span><b id="ltMktEcart">0 €</b></div>
+        <div class="mo-cell" style="display:flex;align-items:center;justify-content:center"><button class="btn sm" onclick="alignMarket()" style="width:100%">⇄ Aligner mes PV sur le marché</button></div>
+      </div>
       <div class="addline">
         <button class="btn sm" onclick="addLine('Sous-traitance','externe')">+ Sous-traitance</button>
         <button class="btn sm" onclick="addLine('Fabrication interne','interne')">+ Fab interne</button>
@@ -408,6 +419,12 @@ function computeLine(l){
   const cost=fCost+pCost, pv=f.pv+p.pv, marge=f.marge+p.marge;
   return {fCost,fPV:f.pv,fMarge:f.marge, pCost,pPV:p.pv,pMarge:p.marge, cost,pv,marge, pct:pv>0?marge/pv:0};
 }
+function fPvuHtml(l,r){
+  const q=(l.qty!=null&&l.qty>0)?l.qty:1;
+  const u=r.fPV/q, mk=l.market||0;
+  const col = mk>0 ? (u>=mk?'color:var(--success)':'color:var(--danger)') : '';
+  return `<span style="${col}" title="PV unitaire fourniture">${EUR.format(Math.round(u))}</span>`;
+}
 function mgInputHtml(i,mode,pct,eur,keyPct,keyEur){
   return mode==='eur'
     ? `<input class="lin" type="text" inputmode="decimal" value="${eur?NUM2.format(eur):''}" placeholder="0" oninput="updLine(${i},'${keyEur}',this.value)">`
@@ -423,14 +440,16 @@ function renderLines(){
     tr.innerHTML=`
       <td><input type="text" value="${escapeHtml(l.label)}" placeholder="Nom du poste…" oninput="updLine(${i},'label',this.value)"></td>
       <td><button class="tag ${l.type}" onclick="toggleType(${i})" title="Cliquer pour basculer interne/externe">${l.type}</button></td>
-      <td class="r"><input class="lin" type="text" inputmode="decimal" value="${l.qty!=null&&l.qty!==''?NUM2.format(l.qty):''}" placeholder="1" oninput="updLine(${i},'qty',this.value)"></td>
-      <td class="r"><input class="lin pu" type="text" inputmode="decimal" value="${l.pu!=null&&l.pu!==''?NUM2.format(l.pu):''}" placeholder="0" oninput="updLine(${i},'pu',this.value)"></td>
-      <td class="r"><span class="mgwrap">${fMg}<button class="mgtoggle" onclick="toggleLineMargin(${i},'f')" title="Basculer % / €">${l.marginMode==='eur'?'€':'%'}</button></span></td>
-      <td class="lcell pv" id="lnFpv${i}">${EUR.format(Math.round(r.fPV))}</td>
-      <td class="r sepL"><input class="lin" type="text" inputmode="decimal" value="${l.poseH?NUM2.format(l.poseH):''}" placeholder="0" oninput="updLine(${i},'poseH',this.value)"></td>
+      <td class="r"><input class="lin" type="text" inputmode="decimal" value="${l.poseH?NUM2.format(l.poseH):''}" placeholder="0" oninput="updLine(${i},'poseH',this.value)"></td>
       <td class="r"><input class="lin" type="text" inputmode="decimal" value="${l.poseCout!=null&&l.poseCout!==''?NUM2.format(l.poseCout):''}" placeholder="40" oninput="updLine(${i},'poseCout',this.value)"></td>
       <td class="r"><span class="mgwrap">${pMg}<button class="mgtoggle" onclick="toggleLineMargin(${i},'p')" title="Basculer % / €">${l.poseMode==='eur'?'€':'%'}</button></span></td>
       <td class="lcell pv" id="lnPpv${i}">${EUR.format(Math.round(r.pPV))}</td>
+      <td class="r sepL"><input class="lin" type="text" inputmode="decimal" value="${l.qty!=null&&l.qty!==''?NUM2.format(l.qty):''}" placeholder="1" oninput="updLine(${i},'qty',this.value)"></td>
+      <td class="r"><input class="lin pu" type="text" inputmode="decimal" value="${l.pu!=null&&l.pu!==''?NUM2.format(l.pu):''}" placeholder="0" oninput="updLine(${i},'pu',this.value)"></td>
+      <td class="r"><span class="mgwrap">${fMg}<button class="mgtoggle" onclick="toggleLineMargin(${i},'f')" title="Basculer % / €">${l.marginMode==='eur'?'€':'%'}</button></span></td>
+      <td class="lcell pv" id="lnFpv${i}">${EUR.format(Math.round(r.fPV))}</td>
+      <td class="lcell pvu" id="lnFpvu${i}">${fPvuHtml(l,r)}</td>
+      <td class="lcell pv sepL" id="lnTot${i}">${EUR.format(Math.round(r.pv))}</td>
       <td class="r sepL"><input class="lin pu" type="text" inputmode="decimal" value="${l.market?NUM2.format(l.market):''}" placeholder="—" oninput="updLine(${i},'market',this.value)"></td>
       <td class="r"><button class="del" onclick="delLine(${i})" title="Supprimer">×</button></td>`;
     tb.appendChild(tr);
@@ -444,9 +463,10 @@ function updLine(i,k,v){
   lines[i][k] = (k==='label')? v : parseNum(v);
   if(k!=='label'){
     const r=computeLine(lines[i]);
-    const fp=$('lnFpv'+i), pp=$('lnPpv'+i);
+    const fp=$('lnFpv'+i), pp=$('lnPpv'+i), fpu=$('lnFpvu'+i);
     if(fp) fp.textContent = EUR.format(Math.round(r.fPV));
     if(pp) pp.textContent = EUR.format(Math.round(r.pPV));
+    if(fpu) fpu.innerHTML = fPvuHtml(lines[i], r);
   }
   render();
 }
@@ -464,10 +484,12 @@ function toggleLineMargin(i,which){
 function toggleType(i){ lines[i].type = lines[i].type==='interne'?'externe':'interne'; renderLines(); render(); }
 function totalCost(){ return lines.reduce((s,l)=>s+computeLine(l).cost,0); }
 function globalTotals(){
-  let cost=0,pv=0,fpv=0,ppv=0;
-  lines.forEach(l=>{ const r=computeLine(l); cost+=r.cost; pv+=r.pv; fpv+=r.fPV; ppv+=r.pPV; });
+  let cost=0,pv=0,fpv=0,ppv=0,mkt=0;
+  lines.forEach(l=>{ const r=computeLine(l); cost+=r.cost; pv+=r.pv; fpv+=r.fPV; ppv+=r.pPV; mkt+=(l.market||0)*(l.qty!=null?(l.qty||0):1); });
   const marge=pv-cost, taux=pv>0?marge/pv:0;
-  return {cost,pv,marge,taux,fpv,ppv};
+  const marketTotal=mkt+ppv;                                  // fourniture au marché + ta pose
+  const margeMkt=marketTotal>0?(marketTotal-cost)/marketTotal:0;
+  return {cost,pv,marge,taux,fpv,ppv,marketFourn:mkt,marketTotal,margeMkt};
 }
 function renderLineTotals(){
   const g=globalTotals();
@@ -477,6 +499,15 @@ function renderLineTotals(){
   $('ltTaux').textContent  = (g.taux*100).toFixed(1).replace('.',',')+' %';
   if($('ltFpv')) $('ltFpv').textContent = EUR.format(Math.round(g.fpv));
   if($('ltPpv')) $('ltPpv').textContent = EUR.format(Math.round(g.ppv));
+  if($('ltMkt')) $('ltMkt').textContent = EUR.format(Math.round(g.marketTotal));
+  if($('ltMktMarge')) $('ltMktMarge').textContent = (g.margeMkt*100).toFixed(1).replace('.',',')+' %';
+  if($('ltMktEcart')){ const ec=g.pv-g.marketTotal; const el=$('ltMktEcart'); el.textContent=(ec>=0?'+':'')+EUR.format(Math.round(ec)); el.parentElement.className='mo-cell '+(ec>=0?'good':'bad'); }
+}
+// Aligner les PV fourniture sur le prix marché (ajuste la marge par ligne) → change la marge globale
+function alignMarket(){
+  if(!confirm('Aligner tes prix de vente fourniture sur le prix marché de chaque ligne ? (ta marge par ligne sera recalculée)')) return;
+  lines.forEach(l=>{ const mk=(l.market||0); if(mk>0){ l.marginMode='pct'; l.marginPct=Math.round(((mk-(l.pu||0))/mk)*10000)/100; } });
+  renderLines(); render(); toast('PV alignés sur le marché');
 }
 
 const NUM2 = new Intl.NumberFormat('fr-FR',{maximumFractionDigits:2});
