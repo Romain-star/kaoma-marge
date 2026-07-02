@@ -178,8 +178,10 @@
   .momarge{font-family:'Inter Tight';font-weight:700;font-size:13px;color:var(--sage-deep);white-space:nowrap;text-align:right}
   /* Articles ligne par ligne */
   .lines-wrap{overflow-x:auto}
-  .lines-wrap table{min-width:1260px}
+  .lines-wrap table{min-width:1380px}
   .pvu{font-size:12px;color:var(--muted)}
+  .mgstep{width:20px;height:26px;border:1px solid var(--line);background:#faf7f3;border-radius:6px;cursor:pointer;font-weight:700;color:var(--sage-deep);font-size:14px;line-height:1;padding:0;flex:0 0 auto}
+  .mgstep:hover{border-color:var(--sage);background:#fff}
   .line-row td:first-child input{min-width:150px}
   .line-row td, tr.grp th, thead tr:nth-child(2) th{white-space:nowrap}
   .lin{width:66px;text-align:right;border:1px solid var(--line);border-radius:8px;padding:7px 7px;font-size:13px;font-family:'Inter Tight';font-weight:700;background:#fff}
@@ -209,6 +211,7 @@
     <div class="dossier-bar">
       <input id="dossierName" type="text" placeholder="Nom du dossier (ex. Boutique Quadro)" oninput="render()">
       <button class="btn ghost" onclick="newDossier()">＋ Nouveau</button>
+      <button id="undoBtn" class="btn ghost" onclick="undoLast()" style="display:none">↩ Annuler</button>
       <span id="saveStatus" class="savest"></span>
     </div>
   </header>
@@ -401,7 +404,7 @@ let _autosaveT;
 
 /* ---------- Articles (lignes de coût) ---------- */
 function defaultLines(){
-  const mk=(label,type)=>({label,type,qty:1,pu:0,marginMode:'pct',marginPct:40,marginEur:0,poseH:0,poseCout:40,poseMode:'pct',posePct:40,poseEur:0,market:0});
+  const mk=(label,type)=>({label,type,qty:1,pu:0,marginMode:'pct',marginPct:40,marginEur:0,poseH:0,poseCout:60,poseMode:'pct',posePct:15,poseEur:0,market:0});
   return [ mk('Bureau d\'études','interne'), mk('Transport','externe'), mk('Pose','externe'),
            mk('Sous-traitance','externe'), mk('Fabrication interne','interne'), mk('Matière','externe') ];
 }
@@ -442,11 +445,11 @@ function renderLines(){
       <td><button class="tag ${l.type}" onclick="toggleType(${i})" title="Cliquer pour basculer interne/externe">${l.type}</button></td>
       <td class="r"><input class="lin" type="text" inputmode="decimal" value="${l.poseH?NUM2.format(l.poseH):''}" placeholder="0" oninput="updLine(${i},'poseH',this.value)"></td>
       <td class="r"><input class="lin" type="text" inputmode="decimal" value="${l.poseCout!=null&&l.poseCout!==''?NUM2.format(l.poseCout):''}" placeholder="40" oninput="updLine(${i},'poseCout',this.value)"></td>
-      <td class="r"><span class="mgwrap">${pMg}<button class="mgtoggle" onclick="toggleLineMargin(${i},'p')" title="Basculer % / €">${l.poseMode==='eur'?'€':'%'}</button></span></td>
+      <td class="r"><span class="mgwrap"><button class="mgstep" onclick="bumpMargin(${i},'p',-1)" title="−">−</button>${pMg}<button class="mgtoggle" onclick="toggleLineMargin(${i},'p')" title="Basculer % / €">${l.poseMode==='eur'?'€':'%'}</button><button class="mgstep" onclick="bumpMargin(${i},'p',1)" title="+">+</button></span></td>
       <td class="lcell pv" id="lnPpv${i}">${EUR.format(Math.round(r.pPV))}</td>
       <td class="r sepL"><input class="lin" type="text" inputmode="decimal" value="${l.qty!=null&&l.qty!==''?NUM2.format(l.qty):''}" placeholder="1" oninput="updLine(${i},'qty',this.value)"></td>
       <td class="r"><input class="lin pu" type="text" inputmode="decimal" value="${l.pu!=null&&l.pu!==''?NUM2.format(l.pu):''}" placeholder="0" oninput="updLine(${i},'pu',this.value)"></td>
-      <td class="r"><span class="mgwrap">${fMg}<button class="mgtoggle" onclick="toggleLineMargin(${i},'f')" title="Basculer % / €">${l.marginMode==='eur'?'€':'%'}</button></span></td>
+      <td class="r"><span class="mgwrap"><button class="mgstep" onclick="bumpMargin(${i},'f',-1)" title="−">−</button>${fMg}<button class="mgtoggle" onclick="toggleLineMargin(${i},'f')" title="Basculer % / €">${l.marginMode==='eur'?'€':'%'}</button><button class="mgstep" onclick="bumpMargin(${i},'f',1)" title="+">+</button></span></td>
       <td class="lcell pv" id="lnFpv${i}">${EUR.format(Math.round(r.fPV))}</td>
       <td class="lcell pvu" id="lnFpvu${i}">${fPvuHtml(l,r)}</td>
       <td class="lcell pv sepL" id="lnTot${i}">${EUR.format(Math.round(r.pv))}</td>
@@ -456,9 +459,9 @@ function renderLines(){
   });
 }
 function escapeHtml(s){return String(s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
-function newLineObj(label,type){ const m=parseNum($('targetA').value)||40; return {label:label||'',type:type||'externe',qty:1,pu:0,marginMode:'pct',marginPct:m,marginEur:0,poseH:0,poseCout:40,poseMode:'pct',posePct:m,poseEur:0,market:0}; }
+function newLineObj(label,type){ const m=parseNum($('targetA').value)||40; return {label:label||'',type:type||'externe',qty:1,pu:0,marginMode:'pct',marginPct:m,marginEur:0,poseH:0,poseCout:60,poseMode:'pct',posePct:15,poseEur:0,market:0}; }
 function addLine(label,type){ lines.push(newLineObj(label,type)); renderLines(); render(); }
-function delLine(i){ lines.splice(i,1); renderLines(); render(); }
+function delLine(i){ snapshotUndo(); lines.splice(i,1); renderLines(); render(); }
 function updLine(i,k,v){
   lines[i][k] = (k==='label')? v : parseNum(v);
   if(k!=='label'){
@@ -505,9 +508,22 @@ function renderLineTotals(){
 }
 // Aligner les PV fourniture sur le prix marché (ajuste la marge par ligne) → change la marge globale
 function alignMarket(){
-  if(!confirm('Aligner tes prix de vente fourniture sur le prix marché de chaque ligne ? (ta marge par ligne sera recalculée)')) return;
+  if(!confirm('Aligner tes prix de vente fourniture sur le prix marché de chaque ligne ? (ta marge par ligne sera recalculée — tu pourras Annuler)')) return;
+  snapshotUndo();
   lines.forEach(l=>{ const mk=(l.market||0); if(mk>0){ l.marginMode='pct'; l.marginPct=Math.round(((mk-(l.pu||0))/mk)*10000)/100; } });
-  renderLines(); render(); toast('PV alignés sur le marché');
+  renderLines(); render(); toast('PV alignés sur le marché — Annuler dispo');
+}
+/* ---------- Annuler (undo 1 niveau) ---------- */
+let _undo=null;
+function snapshotUndo(){ _undo=JSON.parse(JSON.stringify(lines)); updateUndoBtn(); }
+function undoLast(){ if(!_undo) return; lines=_undo; _undo=null; renderLines(); render(); updateUndoBtn(); toast('↩ Modification annulée'); }
+function updateUndoBtn(){ const b=$('undoBtn'); if(b) b.style.display=_undo?'inline-flex':'none'; }
+/* ---------- +/- marge ---------- */
+function bumpMargin(i,which,delta){
+  const l=lines[i];
+  if(which==='p'){ if(l.poseMode==='eur'){ l.poseEur=Math.round(((l.poseEur||0)+delta*10)*100)/100; } else { l.posePct=Math.max(0,Math.round(((l.posePct||0)+delta)*100)/100); } }
+  else { if(l.marginMode==='eur'){ l.marginEur=Math.round(((l.marginEur||0)+delta*10)*100)/100; } else { l.marginPct=Math.max(0,Math.round(((l.marginPct||0)+delta)*100)/100); } }
+  renderLines(); render();
 }
 
 const NUM2 = new Intl.NumberFormat('fr-FR',{maximumFractionDigits:2});
@@ -747,12 +763,12 @@ function openDossier(d){
   let _effM=parseNum(d.targetA)||40;
   if(d.mode!=='A'){ const _pvb=parseNum(d.pvB); if(_pvb>0) _effM=(_pvb-_Dold)/_pvb*100; }
   if(!isFinite(_effM) || _effM>=95 || _Dold<=0) _effM=parseNum(d.targetA)||40; // garde-fou : évite marge 100% sur dossier à coûts 0
-  const _pd=()=>({poseH:0,poseCout:40,poseMode:'pct',posePct:40,poseEur:0,market:0}); // défauts pose/marché
+  const _pd=()=>({poseH:0,poseCout:60,poseMode:'pct',posePct:15,poseEur:0,market:0}); // défauts pose (420€/j ≈ 60€/h, marge 15%) / marché
   lines = (d.lines||defaultLines()).map(l=>{
     if(l.qty!=null){
       return Object.assign(_pd(), {label:l.label||'',type:l.type||'externe',qty:l.qty||0,pu:l.pu||0,
               marginMode:l.marginMode||'pct',marginPct:l.marginPct!=null?l.marginPct:40,marginEur:l.marginEur||0,
-              poseH:l.poseH||0,poseCout:l.poseCout!=null?l.poseCout:40,poseMode:l.poseMode||'pct',posePct:l.posePct!=null?l.posePct:40,poseEur:l.poseEur||0,market:l.market||0});
+              poseH:l.poseH||0,poseCout:l.poseCout!=null?l.poseCout:60,poseMode:l.poseMode||'pct',posePct:l.posePct!=null?l.posePct:15,poseEur:l.poseEur||0,market:l.market||0});
     }
     return Object.assign(_pd(), {label:l.label||'',type:l.type||'externe',qty:1,pu:(l.amount||0),marginMode:'pct',marginPct:Math.round(_effM*100)/100,marginEur:0});
   });
