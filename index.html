@@ -176,6 +176,16 @@
   .moamt{width:72px;text-align:right;border:1px solid var(--line);border-radius:8px;padding:7px 8px;font-size:13px;font-family:'Inter Tight';font-weight:700;background:#fff}
   .moamt:focus{outline:none;border-color:var(--sage)}
   .momarge{font-family:'Inter Tight';font-weight:700;font-size:13px;color:var(--sage-deep);white-space:nowrap;text-align:right}
+  /* Articles ligne par ligne */
+  .lines-wrap{overflow-x:auto}
+  .lin{width:58px;text-align:right;border:1px solid var(--line);border-radius:8px;padding:7px 7px;font-size:13px;font-family:'Inter Tight';font-weight:700;background:#fff}
+  .lin:focus{outline:none;border-color:var(--sage)}
+  .lin.pu{width:74px}
+  .mgtoggle{font-size:11px;font-weight:700;border:1px solid var(--line);background:#faf7f3;border-radius:6px;padding:6px 6px;cursor:pointer;color:var(--sage-deep);min-width:24px}
+  .mgtoggle:hover{border-color:var(--sage)}
+  .lcell{font-family:'Inter Tight';font-weight:700;font-size:13px;white-space:nowrap;text-align:right}
+  .lcell.pv{color:var(--graphite)} .lcell.mg{color:var(--sage-deep)}
+  .mgwrap{display:inline-flex;gap:4px;align-items:center;justify-content:flex-end}
 </style>
 </head>
 <body>
@@ -211,15 +221,24 @@
     <div class="card">
       <h2>🧱 Prix de revient (PDR) — débours réel</h2>
       <div class="hint">Tout ce que le dossier coûte vraiment : sous-traitance, fabrication interne, pose, transport, matière, BE, gruttage… Tape les montants en € HT. Le total = ton PDR.</div>
+      <div class="lines-wrap">
       <table>
         <thead>
-          <tr><th>Poste</th><th>Type</th><th class="r">Montant € HT</th><th></th></tr>
+          <tr>
+            <th>Poste</th><th>Type</th>
+            <th class="r">Qté</th><th class="r">PU € HT</th>
+            <th class="r">Marge</th><th class="r">Marge €</th><th class="r">PV € HT</th><th></th>
+          </tr>
         </thead>
         <tbody id="lines"></tbody>
-        <tfoot>
-          <tr class="total-row"><td colspan="2">Total — Prix de revient (PDR)</td><td class="r" id="totalCost">0 €</td><td></td></tr>
-        </tfoot>
       </table>
+      </div>
+      <div class="mo-out" style="margin-top:14px">
+        <div class="mo-cell"><span>PDR total (coût)</span><b id="ltPdr">0 €</b></div>
+        <div class="mo-cell"><span>PV total (somme des lignes)</span><b id="ltPv">0 €</b></div>
+        <div class="mo-cell hi"><span>Marge globale (par lignes)</span><b id="ltMarge">0 €</b></div>
+        <div class="mo-cell"><span>Taux de marge global</span><b id="ltTaux">0 %</b></div>
+      </div>
       <div class="addline">
         <button class="btn sm" onclick="addLine('Sous-traitance','externe')">+ Sous-traitance</button>
         <button class="btn sm" onclick="addLine('Fabrication interne','interne')">+ Fab interne</button>
@@ -386,36 +405,75 @@ let moLines=[];            // main-d'œuvre : {label, hours, cout, vente, marge}
 let suppressAutosave=false; // vrai pendant les chargements programmatiques (pas d'autosave)
 let _autosaveT;
 
-/* ---------- Cost lines ---------- */
+/* ---------- Articles (lignes de coût) ---------- */
 function defaultLines(){
-  return [
-    {label:'Bureau d\'études', type:'interne', amount:0},
-    {label:'Transport', type:'externe', amount:0},
-    {label:'Pose', type:'externe', amount:0},
-    {label:'Sous-traitance', type:'externe', amount:0},
-    {label:'Fabrication interne', type:'interne', amount:0},
-    {label:'Matière', type:'externe', amount:0},
-  ];
+  const mk=(label,type)=>({label,type,qty:1,pu:0,marginMode:'pct',marginPct:40,marginEur:0});
+  return [ mk('Bureau d\'études','interne'), mk('Transport','externe'), mk('Pose','externe'),
+           mk('Sous-traitance','externe'), mk('Fabrication interne','interne'), mk('Matière','externe') ];
+}
+function lineCost(l){ return (l.qty!=null) ? (l.qty||0)*(l.pu||0) : (l.amount||0); }
+function computeLine(l){
+  const cost=lineCost(l);
+  let pv, marge, pct;
+  if(l.marginMode==='eur'){ marge=l.marginEur||0; pv=cost+marge; pct=pv>0?marge/pv:0; }
+  else { pct=(l.marginPct||0)/100; pv=pct<1?cost/(1-pct):0; marge=pv-cost; }
+  return {cost,pv,marge,pct};
 }
 function renderLines(){
   const tb=$('lines'); tb.innerHTML='';
   lines.forEach((l,i)=>{
+    const r=computeLine(l);
+    const mgInput = l.marginMode==='eur'
+      ? `<input class="lin" type="text" inputmode="decimal" value="${l.marginEur?NUM2.format(l.marginEur):''}" placeholder="0" oninput="updLine(${i},'marginEur',this.value)">`
+      : `<input class="lin" type="text" inputmode="decimal" value="${l.marginPct!=null&&l.marginPct!==''?NUM2.format(l.marginPct):''}" placeholder="0" oninput="updLine(${i},'marginPct',this.value)">`;
     const tr=document.createElement('tr'); tr.className='line-row';
     tr.innerHTML=`
       <td><input type="text" value="${escapeHtml(l.label)}" placeholder="Nom du poste…" oninput="updLine(${i},'label',this.value)"></td>
       <td><button class="tag ${l.type}" onclick="toggleType(${i})" title="Cliquer pour basculer interne/externe">${l.type}</button></td>
-      <td class="r"><input class="amt" type="text" inputmode="decimal" value="${l.amount?NUM.format(l.amount):''}" placeholder="0" oninput="updLine(${i},'amount',this.value)" onblur="fmtAmt(${i},this)"></td>
+      <td class="r"><input class="lin" type="text" inputmode="decimal" value="${l.qty!=null&&l.qty!==''?NUM2.format(l.qty):''}" placeholder="1" oninput="updLine(${i},'qty',this.value)"></td>
+      <td class="r"><input class="lin pu" type="text" inputmode="decimal" value="${l.pu!=null&&l.pu!==''?NUM2.format(l.pu):''}" placeholder="0" oninput="updLine(${i},'pu',this.value)"></td>
+      <td class="r"><span class="mgwrap">${mgInput}<button class="mgtoggle" onclick="toggleLineMargin(${i})" title="Basculer % / €">${l.marginMode==='eur'?'€':'%'}</button></span></td>
+      <td class="lcell mg" id="lnMg${i}">${EUR.format(Math.round(r.marge))}</td>
+      <td class="lcell pv" id="lnPv${i}">${EUR.format(Math.round(r.pv))}</td>
       <td class="r"><button class="del" onclick="delLine(${i})" title="Supprimer">×</button></td>`;
     tb.appendChild(tr);
   });
 }
 function escapeHtml(s){return String(s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
-function addLine(label,type){ lines.push({label:label||'',type:type||'externe',amount:0}); renderLines(); render(); }
+function addLine(label,type){ const m=parseNum($('targetA').value)||40; lines.push({label:label||'',type:type||'externe',qty:1,pu:0,marginMode:'pct',marginPct:m,marginEur:0}); renderLines(); render(); }
 function delLine(i){ lines.splice(i,1); renderLines(); render(); }
-function updLine(i,k,v){ lines[i][k]= k==='amount'?parseNum(v):v; render(); }
-function fmtAmt(i,el){ el.value = lines[i].amount? NUM.format(lines[i].amount):''; }
+function updLine(i,k,v){
+  lines[i][k] = (k==='label')? v : parseNum(v);
+  if(k!=='label'){
+    const r=computeLine(lines[i]);
+    const mg=$('lnMg'+i), pv=$('lnPv'+i);
+    if(mg) mg.textContent = EUR.format(Math.round(r.marge));
+    if(pv) pv.textContent = EUR.format(Math.round(r.pv));
+  }
+  render();
+}
+function toggleLineMargin(i){
+  const l=lines[i], r=computeLine(l);
+  if(l.marginMode==='eur'){ l.marginMode='pct'; l.marginPct=Math.round(r.pct*10000)/100; }
+  else { l.marginMode='eur'; l.marginEur=Math.round(r.marge*100)/100; }
+  renderLines(); render();
+}
 function toggleType(i){ lines[i].type = lines[i].type==='interne'?'externe':'interne'; renderLines(); render(); }
-function totalCost(){ return lines.reduce((s,l)=>s+(l.amount||0),0) + moTotals().pdr; }
+function totalCost(){ return lines.reduce((s,l)=>s+lineCost(l),0) + moTotals().pdr; }
+function globalTotals(){
+  let cost=0, pv=0;
+  lines.forEach(l=>{ const r=computeLine(l); cost+=r.cost; pv+=r.pv; });
+  const mo=moTotals(); cost+=mo.pdr; pv+=mo.pdv;
+  const marge=pv-cost, taux=pv>0?marge/pv:0;
+  return {cost,pv,marge,taux};
+}
+function renderLineTotals(){
+  const g=globalTotals();
+  $('ltPdr').textContent   = EUR.format(Math.round(g.cost));
+  $('ltPv').textContent    = EUR.format(Math.round(g.pv));
+  $('ltMarge').textContent = EUR.format(Math.round(g.marge));
+  $('ltTaux').textContent  = (g.taux*100).toFixed(1).replace('.',',')+' %';
+}
 
 /* ---------- Main-d'œuvre (MO) — plusieurs lignes ---------- */
 const NUM2 = new Intl.NumberFormat('fr-FR',{maximumFractionDigits:2});
@@ -490,7 +548,7 @@ function setMode(m){
 /* ---------- Core render ---------- */
 function render(){
   const D = totalCost();
-  $('totalCost').textContent = EUR.format(D);
+  renderLineTotals();
   renderMoOut();
 
   // targets reflected
@@ -638,7 +696,7 @@ function localSet(a){ localStorage.setItem('kaoma_marge',JSON.stringify(a)); }
 function currentState(){
   return {
     name: $('dossierName').value.trim() || 'Sans nom',
-    mode, lines: JSON.parse(JSON.stringify(lines)),
+    mode, lines: lines.map(l=>Object.assign({}, l, {amount: lineCost(l)})),
     moLines: JSON.parse(JSON.stringify(moLines)), moMode,
     targetA: $('targetA').value, targetB: $('targetB').value,
     pvB: $('pvB').value,
@@ -667,12 +725,22 @@ async function loadList(){
   if(!arr.length){ el.innerHTML='<div class="saved-empty">Aucun dossier enregistré pour le moment.</div>'; return; }
   el.innerHTML='';
   arr.forEach(d=>{
-    let moC = 0;
-    if(d.moLines){ d.moLines.forEach(l=>moC+=parseNum(l.cout)*parseNum(l.hours)); }
-    else if(d.mo){ moC = parseNum(d.mo.cout)*parseNum(d.mo.hours); }
-    const D=(d.lines||[]).reduce((s,l)=>s+(l.amount||0),0)+moC;
+    // Coût + PV par lignes (nouveau format), sinon logique globale (ancien format)
+    let cost=0, pvArt=0, hasPerLine=false;
+    (d.lines||[]).forEach(l=>{
+      const c=(l.qty!=null)?(parseNum(l.qty))*(parseNum(l.pu)):(parseNum(l.amount)); cost+=c;
+      if(l.qty!=null||l.marginMode){ hasPerLine=true;
+        let p; if(l.marginMode==='eur'){p=c+parseNum(l.marginEur);} else {const m=parseNum(l.marginPct)/100; p=m<1?c/(1-m):0;} pvArt+=p; }
+    });
+    let moC=0, moPV=0;
+    const moArr=d.moLines||(d.mo?[{cout:d.mo.cout,hours:d.mo.hours,vente:d.mo.vente,marge:d.mo.marge}]:[]);
+    const mm=d.moMode||(d.mo?d.mo.mode:'vente')||'vente';
+    moArr.forEach(l=>{ const c=parseNum(l.cout)*parseNum(l.hours); moC+=c;
+      let v; if(mm==='marge'){const m=parseNum(l.marge)/100; v=m<1?parseNum(l.cout)/(1-m):0;} else {v=parseNum(l.vente);} moPV+=v*parseNum(l.hours); });
+    const D=cost+moC;
     let pv=0,marge=0,taux=0;
-    if(d.mode==='A'){ const t=parseNum(d.targetA)/100; pv=t<1?D/(1-t):0; marge=pv-D; taux=t; }
+    if(hasPerLine){ pv=pvArt+moPV; marge=pv-D; taux=pv>0?marge/pv:0; }
+    else if(d.mode==='A'){ const t=parseNum(d.targetA)/100; pv=t<1?D/(1-t):0; marge=pv-D; taux=t; }
     else { pv=parseNum(d.pvB); marge=pv-D; taux=pv>0?marge/pv:0; }
     const div=document.createElement('div'); div.className='saved-item';
     div.innerHTML=`<div class="n">${escapeHtml(d.name)}</div>
@@ -687,7 +755,20 @@ function openDossier(d){
   suppressAutosave=true;
   window._curId=d.id;
   $('dossierName').value=d.name==='Sans nom'?'':d.name;
-  lines=JSON.parse(JSON.stringify(d.lines||defaultLines()));
+  // Articles : nouveau format (qty/pu/marge par ligne) sinon migration ancien format {label,type,amount}
+  // Pour l'ancien format, on répartit la marge effective du dossier sur chaque ligne (cible en mode A, marge réelle en mode B)
+  const _oldCost=(d.lines||[]).reduce((s,l)=>s+(l.qty!=null?(l.qty||0)*(l.pu||0):(l.amount||0)),0);
+  let _oldMoC=0; (d.moLines||(d.mo?[{cout:d.mo.cout,hours:d.mo.hours}]:[])).forEach(l=>_oldMoC+=parseNum(l.cout)*parseNum(l.hours));
+  const _Dold=_oldCost+_oldMoC;
+  let _effM=parseNum(d.targetA)||40;
+  if(d.mode!=='A'){ const _pvb=parseNum(d.pvB); if(_pvb>0) _effM=(_pvb-_Dold)/_pvb*100; }
+  lines = (d.lines||defaultLines()).map(l=>{
+    if(l.qty!=null){
+      return {label:l.label||'',type:l.type||'externe',qty:l.qty||0,pu:l.pu||0,
+              marginMode:l.marginMode||'pct',marginPct:l.marginPct!=null?l.marginPct:40,marginEur:l.marginEur||0};
+    }
+    return {label:l.label||'',type:l.type||'externe',qty:1,pu:(l.amount||0),marginMode:'pct',marginPct:Math.round(_effM*100)/100,marginEur:0};
+  });
   // MO : nouveau format multi-lignes, sinon migration de l'ancien format mono-ligne, sinon 1 ligne vide
   if(d.moLines){ moLines=JSON.parse(JSON.stringify(d.moLines)); moMode=d.moMode||'vente'; }
   else if(d.mo){ moLines=[{label:'Main-d\'œuvre',hours:d.mo.hours||0,cout:d.mo.cout!=null?d.mo.cout:40,vente:d.mo.vente!=null?d.mo.vente:80,marge:d.mo.marge!=null?d.mo.marge:50}]; moMode=d.mo.mode||'vente'; }
