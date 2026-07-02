@@ -746,6 +746,7 @@ function openDossier(d){
   const _Dold=_oldCost+_oldMoC;
   let _effM=parseNum(d.targetA)||40;
   if(d.mode!=='A'){ const _pvb=parseNum(d.pvB); if(_pvb>0) _effM=(_pvb-_Dold)/_pvb*100; }
+  if(!isFinite(_effM) || _effM>=95 || _Dold<=0) _effM=parseNum(d.targetA)||40; // garde-fou : évite marge 100% sur dossier à coûts 0
   const _pd=()=>({poseH:0,poseCout:40,poseMode:'pct',posePct:40,poseEur:0,market:0}); // défauts pose/marché
   lines = (d.lines||defaultLines()).map(l=>{
     if(l.qty!=null){
