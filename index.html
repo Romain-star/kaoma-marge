@@ -178,15 +178,19 @@
   .momarge{font-family:'Inter Tight';font-weight:700;font-size:13px;color:var(--sage-deep);white-space:nowrap;text-align:right}
   /* Articles ligne par ligne */
   .lines-wrap{overflow-x:auto}
-  .lines-wrap table{min-width:1380px}
+  .lines-wrap table{min-width:1240px}
+  .lines-wrap th{padding:0 5px 5px}
+  .line-row td{padding:3px 3px}
   .pvu{font-size:12px;color:var(--muted)}
-  .mgstep{width:20px;height:26px;border:1px solid var(--line);background:#faf7f3;border-radius:6px;cursor:pointer;font-weight:700;color:var(--sage-deep);font-size:14px;line-height:1;padding:0;flex:0 0 auto}
+  .mktrange{font-size:10px;color:var(--muted);white-space:nowrap;margin-top:2px}
+  .mo-cell.muted b{color:var(--muted)}
+  .mgstep{width:16px;height:24px;border:1px solid var(--line);background:#faf7f3;border-radius:5px;cursor:pointer;font-weight:700;color:var(--sage-deep);font-size:13px;line-height:1;padding:0;flex:0 0 auto}
   .mgstep:hover{border-color:var(--sage);background:#fff}
   .line-row td:first-child input{min-width:150px}
   .line-row td, tr.grp th, thead tr:nth-child(2) th{white-space:nowrap}
-  .lin{width:66px;text-align:right;border:1px solid var(--line);border-radius:8px;padding:7px 7px;font-size:13px;font-family:'Inter Tight';font-weight:700;background:#fff}
+  .lin{width:52px;text-align:right;border:1px solid var(--line);border-radius:7px;padding:6px 6px;font-size:12.5px;font-family:'Inter Tight';font-weight:700;background:#fff}
   .lin:focus{outline:none;border-color:var(--sage)}
-  .lin.pu{width:92px}
+  .lin.pu{width:74px}
   .mgtoggle{font-size:11px;font-weight:700;border:1px solid var(--line);background:#faf7f3;border-radius:6px;padding:6px 6px;cursor:pointer;color:var(--sage-deep);min-width:24px}
   .mgtoggle:hover{border-color:var(--sage)}
   .lcell{font-family:'Inter Tight';font-weight:700;font-size:13px;white-space:nowrap;text-align:right}
@@ -266,6 +270,12 @@
         <div class="mo-cell"><span>Marge si tu vends au prix marché</span><b id="ltMktMarge">0 %</b></div>
         <div class="mo-cell"><span>Écart ton PV − marché</span><b id="ltMktEcart">0 €</b></div>
         <div class="mo-cell" style="display:flex;align-items:center;justify-content:center"><button class="btn sm" onclick="alignMarket()" style="width:100%">⇄ Aligner mes PV sur le marché</button></div>
+      </div>
+      <div class="mo-out" style="margin-top:10px">
+        <div class="mo-cell"><span>🏨 Nb chambres du projet</span><input id="nbRooms" class="lin pu" style="width:90px;margin-top:2px" type="text" inputmode="decimal" value="1" oninput="updNbRooms(this.value)"></div>
+        <div class="mo-cell hi"><span>Ton agencement / chambre</span><b id="bhPerRoom">0 €</b></div>
+        <div class="mo-cell"><span>Repère hôtelier (agencement fixe)</span><b style="font-size:13px">4★ 4–8 k€ · 5★ 16–20 k€</b></div>
+        <div class="mo-cell" id="bhVerdictCell"><span>Positionnement</span><b id="bhVerdict">—</b></div>
       </div>
       <div class="addline">
         <button class="btn sm" onclick="addLine('Sous-traitance','externe')">+ Sous-traitance</button>
@@ -401,6 +411,7 @@ let moMode='vente';        // 'vente' = coût+taux de vente · 'marge' = coût+m
 let moLines=[];            // main-d'œuvre : {label, hours, cout, vente, marge}
 let suppressAutosave=false; // vrai pendant les chargements programmatiques (pas d'autosave)
 let _autosaveT;
+let nbRooms=1; // nb de chambres du projet (repère budget hôtelier)
 
 /* ---------- Articles (lignes de coût) ---------- */
 function defaultLines(){
@@ -453,7 +464,7 @@ function renderLines(){
       <td class="lcell pv" id="lnFpv${i}">${EUR.format(Math.round(r.fPV))}</td>
       <td class="lcell pvu" id="lnFpvu${i}">${fPvuHtml(l,r)}</td>
       <td class="lcell pv sepL" id="lnTot${i}">${EUR.format(Math.round(r.pv))}</td>
-      <td class="r sepL"><input class="lin pu" type="text" inputmode="decimal" value="${l.market?NUM2.format(l.market):''}" placeholder="—" oninput="updLine(${i},'market',this.value)"></td>
+      <td class="r sepL"><input class="lin pu" type="text" inputmode="decimal" value="${l.market?NUM2.format(l.market):''}" placeholder="—" oninput="updLine(${i},'market',this.value)"><div class="mktrange">${(l.marketLow&&l.marketHigh)?NUM2.format(l.marketLow)+'–'+NUM2.format(l.marketHigh):''}</div></td>
       <td class="r"><button class="del" onclick="delLine(${i})" title="Supprimer">×</button></td>`;
     tb.appendChild(tr);
   });
@@ -502,9 +513,24 @@ function renderLineTotals(){
   $('ltTaux').textContent  = (g.taux*100).toFixed(1).replace('.',',')+' %';
   if($('ltFpv')) $('ltFpv').textContent = EUR.format(Math.round(g.fpv));
   if($('ltPpv')) $('ltPpv').textContent = EUR.format(Math.round(g.ppv));
+  renderBudgetHotelier(g);
   if($('ltMkt')) $('ltMkt').textContent = EUR.format(Math.round(g.marketTotal));
   if($('ltMktMarge')) $('ltMktMarge').textContent = (g.margeMkt*100).toFixed(1).replace('.',',')+' %';
   if($('ltMktEcart')){ const ec=g.pv-g.marketTotal; const el=$('ltMktEcart'); el.textContent=(ec>=0?'+':'')+EUR.format(Math.round(ec)); el.parentElement.className='mo-cell '+(ec>=0?'good':'bad'); }
+}
+function updNbRooms(v){ nbRooms=parseNum(v)||1; renderBudgetHotelier(); }
+function renderBudgetHotelier(g){
+  g = g || globalTotals();
+  const per = g.pv/(nbRooms||1);
+  if($('bhPerRoom')) $('bhPerRoom').textContent = EUR.format(Math.round(per));
+  const v=$('bhVerdict'), cell=$('bhVerdictCell'); if(!v) return;
+  let txt,cls;
+  if(per<4000){ txt='sous repère 4★'; cls='muted'; }
+  else if(per<8000){ txt='niveau 4★'; cls='muted'; }
+  else if(per<16000){ txt='haut 4★ / entrée 5★'; cls='good'; }
+  else if(per<=20000){ txt='niveau 5★ ✓'; cls='good'; }
+  else { txt='5★+ très premium'; cls='good'; }
+  v.textContent=txt; if(cell) cell.className='mo-cell '+cls;
 }
 // Aligner les PV fourniture sur le prix marché (ajuste la marge par ligne) → change la marge globale
 function alignMarket(){
@@ -700,7 +726,7 @@ function currentState(){
     mode, lines: lines.map(l=>Object.assign({}, l, {amount: lineCost(l)})),
     moLines: [], moMode: 'vente',
     targetA: $('targetA').value, targetB: $('targetB').value,
-    pvB: $('pvB').value,
+    pvB: $('pvB').value, nbRooms,
     updated: new Date().toISOString()
   };
 }
@@ -777,6 +803,7 @@ function openDossier(d){
   if(d.moLines && d.moLines.length){ d.moLines.forEach(ml=>_pushMo(ml, d.moMode||'vente')); }
   else if(d.mo){ _pushMo(d.mo, d.mo.mode||'vente'); }
   $('targetA').value=d.targetA||40; $('targetB').value=d.targetB||40; $('pvB').value=d.pvB||'';
+  nbRooms=parseNum(d.nbRooms)||1; if($('nbRooms')) $('nbRooms').value=nbRooms;
   setMode(d.mode||'A'); renderLines(); render();
   suppressAutosave=false; setSaveStatus('uptodate');
   toast('📂 « '+d.name+' » ouvert');
@@ -793,6 +820,7 @@ function newDossier(){
   suppressAutosave=true;
   window._curId=null;
   $('dossierName').value=''; $('pvB').value=''; $('targetA').value=40; $('targetB').value=40;
+  nbRooms=1; if($('nbRooms')) $('nbRooms').value=1;
   lines=defaultLines();
   setMode('A'); renderLines(); render();
   suppressAutosave=false; setSaveStatus('unnamed');
