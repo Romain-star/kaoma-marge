@@ -177,9 +177,16 @@
   .moamt:focus{outline:none;border-color:var(--sage)}
   .momarge{font-family:'Inter Tight';font-weight:700;font-size:13px;color:var(--sage-deep);white-space:nowrap;text-align:right}
   /* Articles ligne par ligne */
-  .lines-wrap{overflow-x:auto}
+  .lines-wrap{overflow:auto;max-height:70vh;border:1px solid var(--line);border-radius:12px}
   .lines-wrap table{min-width:1240px}
   .lines-wrap th{padding:0 5px 5px}
+  /* En-têtes figés au défilement (sticky) */
+  .lines-wrap thead th{position:sticky;z-index:3;background:#f3ede6}
+  .lines-wrap thead tr.grp th{top:0;z-index:4;text-align:center;height:30px;vertical-align:middle;font-size:10.5px;font-weight:700;color:var(--sage-deep);letter-spacing:.03em;text-transform:none}
+  .lines-wrap thead tr.det th{top:30px;border-bottom:1.5px solid var(--graphite);padding-top:7px}
+  .lines-wrap thead th.gPose{background:#eaf3ee} .lines-wrap thead th.gFourn{background:#f6efe6}
+  .lines-wrap thead th.gTot{background:#e9eef5} .lines-wrap thead th.gMkt{background:#f2ecf3}
+  .lines-wrap thead th.gArt,.lines-wrap thead th.gEnd{background:#efe8e0}
   .line-row td{padding:3px 3px}
   .pvu{font-size:12px;color:var(--muted)}
   .mktrange{font-size:10px;color:var(--muted);white-space:nowrap;margin-top:2px}
@@ -200,6 +207,30 @@
   tr.grp th{font-size:10px;letter-spacing:.06em;color:var(--sage-deep);padding:0 8px 4px;text-align:left}
   .split-line{font-size:12px;color:var(--muted);margin-top:8px}
   .split-line b{color:var(--graphite)}
+
+  /* Estimateur pose + repère communs */
+  .repere-head{font-family:'Inter Tight';font-weight:700;font-size:13px;color:var(--graphite);margin:18px 0 8px;display:flex;align-items:center;gap:7px}
+  .poseEst,.communs{margin-top:16px;border:1px dashed var(--sage);border-radius:12px;padding:14px 16px;background:#fbfaf8}
+  .poseEst-h,.communs-h{font-family:'Inter Tight';font-weight:700;font-size:13.5px;color:var(--sage-deep);margin-bottom:10px;display:flex;align-items:center;gap:7px}
+  .poseEst-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;align-items:end}
+  @media(max-width:560px){.poseEst-grid{grid-template-columns:1fr 1fr}}
+  .poseEst-grid label{font-size:11px;color:var(--muted);font-weight:600;display:flex;flex-direction:column;gap:4px}
+  .poseEst-grid input{border:1px solid var(--line);border-radius:8px;padding:9px 10px;font-size:15px;font-family:'Inter Tight';font-weight:700;background:#fff}
+  .poseEst-grid input:focus{outline:none;border-color:var(--sage)}
+  .poseEst-out{background:#eef6f0;border:1px solid #bfe0cc;border-radius:9px;padding:9px 11px}
+  .poseEst-out span{font-size:11px;color:var(--muted);font-weight:500;display:block}
+  .poseEst-out b{font-family:'Inter Tight';font-weight:800;font-size:17px;display:block;margin-top:2px;color:var(--sage-deep)}
+  .poseEst-note,.communs-note{font-size:11.5px;color:var(--muted);margin-top:10px;line-height:1.45}
+  .communs-intro{font-size:12.5px;color:var(--graphite);margin-bottom:12px;line-height:1.5}
+  .communs-inputs{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+  @media(max-width:560px){.communs-inputs{grid-template-columns:1fr}}
+  .communs-inputs label{font-size:11px;color:var(--muted);font-weight:600;display:flex;flex-direction:column;gap:4px}
+  .communs-inputs input{border:1px solid var(--line);border-radius:8px;padding:9px 10px;font-size:14px;font-family:'Inter Tight';font-weight:700;background:#fff}
+  .communs-inputs input:focus{outline:none;border-color:var(--sage)}
+  .communs-verdict{margin-top:12px;font-family:'Inter Tight';font-weight:700;font-size:13.5px;padding:10px 13px;border-radius:9px;text-align:center}
+  .communs-verdict.ok{background:#e2f3ea;color:var(--success)}
+  .communs-verdict.ko{background:#fef6e7;color:#7a5b08}
+  .communs-verdict.neutral{background:#f0ece6;color:var(--muted)}
 </style>
 </head>
 <body>
@@ -240,19 +271,19 @@
       <table>
         <thead>
           <tr class="grp">
-            <th colspan="2"></th>
-            <th colspan="4">👷 POSE</th>
-            <th colspan="5" class="sepL">🧱 FOURNITURE</th>
-            <th class="sepL">TOTAL</th>
-            <th class="sepL">MARCHÉ</th>
-            <th></th>
+            <th colspan="2" class="gArt">Article</th>
+            <th colspan="4" class="gPose">👷 Pose (main-d'œuvre)</th>
+            <th colspan="5" class="gFourn sepL">🧱 Fourniture (meuble)</th>
+            <th class="gTot sepL">💰 Total</th>
+            <th class="gMkt sepL">🛒 Marché</th>
+            <th class="gEnd"></th>
           </tr>
-          <tr>
+          <tr class="det">
             <th>Poste</th><th>Type</th>
-            <th class="r">Temps h</th><th class="r">€/h</th><th class="r">Marge</th><th class="r">PV €</th>
-            <th class="r sepL">Qté</th><th class="r">PU €</th><th class="r">Marge</th><th class="r">PV € total</th><th class="r">PV € / u</th>
-            <th class="r sepL">PV total ligne</th>
-            <th class="r sepL">Prix marché / u</th><th></th>
+            <th class="r gPose">Temps (h)</th><th class="r gPose">Coût €/h</th><th class="r gPose">Marge</th><th class="r gPose">PV pose €</th>
+            <th class="r sepL gFourn">Qté</th><th class="r gFourn">PU €</th><th class="r gFourn">Marge</th><th class="r gFourn">PV fourn. €</th><th class="r gFourn">PV € / u</th>
+            <th class="r sepL gTot">PV ligne €</th>
+            <th class="r sepL gMkt">Marché € / u</th><th class="gEnd"></th>
           </tr>
         </thead>
         <tbody id="lines"></tbody>
@@ -271,12 +302,45 @@
         <div class="mo-cell"><span>Écart ton PV − marché</span><b id="ltMktEcart">0 €</b></div>
         <div class="mo-cell" style="display:flex;align-items:center;justify-content:center"><button class="btn sm" onclick="alignMarket()" style="width:100%">⇄ Aligner mes PV sur le marché</button></div>
       </div>
-      <div class="mo-out" style="margin-top:10px">
-        <div class="mo-cell"><span>🏨 Nb chambres du projet</span><input id="nbRooms" class="lin pu" style="width:90px;margin-top:2px" type="text" inputmode="decimal" value="1" oninput="updNbRooms(this.value)"></div>
+
+      <!-- Estimateur pose : jours ↔ budget -->
+      <div class="poseEst">
+        <div class="poseEst-h">🧰 Estimateur pose — jours ↔ budget</div>
+        <div class="poseEst-grid">
+          <label>Jours de pose<input id="peJours" type="text" inputmode="decimal" placeholder="0" oninput="poseEstFrom('jours')"></label>
+          <label>Budget pose €<input id="peBudget" type="text" inputmode="decimal" placeholder="0" oninput="poseEstFrom('budget')"></label>
+          <label>Taux €/jour<input id="peTaux" type="text" inputmode="decimal" value="420" oninput="poseEstFrom('taux')"></label>
+          <div class="poseEst-out"><span>≈ heures (1 j = 7 h)</span><b id="peHeures">0 h</b></div>
+        </div>
+        <div class="poseEst-note">Tape des <b>jours</b> → budget auto (jours × taux) · ou tape un <b>budget</b> → jours auto. Défaut ST Tecadis <b>420 €/j</b> (<span id="peCoutH">60</span> €/h · 7 h/j). Taux éditable.</div>
+      </div>
+
+      <div class="repere-head">🏨 Repère par chambre <span style="font-weight:500;color:var(--muted);font-size:11.5px">— pour les lots chambres</span></div>
+      <div class="mo-out" style="margin-top:2px">
+        <div class="mo-cell"><span>🏨 Nb chambres / clés hôtel</span><input id="nbRooms" class="lin pu" style="width:90px;margin-top:2px" type="text" inputmode="decimal" value="1" oninput="updNbRooms(this.value)"></div>
         <div class="mo-cell hi"><span>Ton agencement / chambre</span><b id="bhPerRoom">0 €</b></div>
         <div class="mo-cell"><span>Repère hôtelier (agencement fixe)</span><b style="font-size:13px">4★ 4–8 k€ · 5★ 16–20 k€</b></div>
         <div class="mo-cell" id="bhVerdictCell"><span>Positionnement</span><b id="bhVerdict">—</b></div>
       </div>
+
+      <!-- Repère parties communes (méthode hôtelière) -->
+      <div class="communs">
+        <div class="communs-h">🛎️ Repère parties communes — méthode hôtelière</div>
+        <div class="communs-intro">Les communs (bar, réception, buffet, banquettes) ne se budgètent pas à la chambre. Règle hôtelière FF&amp;E : les <b>chambres</b> pèsent 65-70 % du mobilier, les <b>espaces communs</b> 15-20 % (+ F&amp;B 10-15 %). L'agencement des communs représente donc ~<b>20-35 %</b> du budget agencement des chambres.</div>
+        <div class="communs-inputs">
+          <label>Budget agencement chambres (lot chambres) €<input id="commRooms" type="text" inputmode="decimal" placeholder="ex. 544 712" oninput="render()"></label>
+          <label>Surface communs m² (option)<input id="commSurface" type="text" inputmode="decimal" placeholder="—" oninput="render()"></label>
+        </div>
+        <div class="mo-out">
+          <div class="mo-cell hi"><span>Ton budget communs (ce dossier)</span><b id="commPv">0 €</b></div>
+          <div class="mo-cell" id="commPctCell"><span>% du budget chambres</span><b id="commPct">—</b></div>
+          <div class="mo-cell"><span>Communs / clé</span><b id="commPerKey">—</b></div>
+          <div class="mo-cell"><span>Communs / m²</span><b id="commPerM2">—</b></div>
+        </div>
+        <div class="communs-verdict neutral" id="commVerdict">Renseigne le budget des chambres (lot chambres) pour situer tes communs selon la règle 20-35 %.</div>
+        <div class="communs-note">Repères hôteliers : communs ≈ <b>20-35 %</b> des chambres · agencement/FF&amp;E lobby-public ~<b>1 500-3 000 €/m²</b> · un bar sur-mesure complet ~15-75 k€. Ordres de grandeur sourcés, à ajuster.</div>
+      </div>
+
       <div class="addline">
         <button class="btn sm" onclick="addLine('Sous-traitance','externe')">+ Sous-traitance</button>
         <button class="btn sm" onclick="addLine('Fabrication interne','interne')">+ Fab interne</button>
@@ -514,6 +578,7 @@ function renderLineTotals(){
   if($('ltFpv')) $('ltFpv').textContent = EUR.format(Math.round(g.fpv));
   if($('ltPpv')) $('ltPpv').textContent = EUR.format(Math.round(g.ppv));
   renderBudgetHotelier(g);
+  renderCommuns(g);
   if($('ltMkt')) $('ltMkt').textContent = EUR.format(Math.round(g.marketTotal));
   if($('ltMktMarge')) $('ltMktMarge').textContent = (g.margeMkt*100).toFixed(1).replace('.',',')+' %';
   if($('ltMktEcart')){ const ec=g.pv-g.marketTotal; const el=$('ltMktEcart'); el.textContent=(ec>=0?'+':'')+EUR.format(Math.round(ec)); el.parentElement.className='mo-cell '+(ec>=0?'good':'bad'); }
@@ -531,6 +596,45 @@ function renderBudgetHotelier(g){
   else if(per<=20000){ txt='niveau 5★ ✓'; cls='good'; }
   else { txt='5★+ très premium'; cls='good'; }
   v.textContent=txt; if(cell) cell.className='mo-cell '+cls;
+}
+/* ---------- Estimateur pose : jours ↔ budget ---------- */
+function poseEstFrom(src){
+  const taux=parseNum($('peTaux').value)||420;
+  if(src==='budget'){
+    const b=parseNum($('peBudget').value); const j=taux>0?b/taux:0;
+    $('peJours').value = j? NUM2.format(Math.round(j*100)/100):'';
+  } else { // 'jours' ou 'taux' → recalcule le budget depuis les jours
+    const j=parseNum($('peJours').value); const b=j*taux;
+    $('peBudget').value = b? NUM.format(Math.round(b)):'';
+  }
+  const jj=parseNum($('peJours').value);
+  if($('peHeures')) $('peHeures').textContent = NUM.format(Math.round(jj*7))+' h';
+  if($('peCoutH')) $('peCoutH').textContent = NUM.format(Math.round(taux/7));
+}
+/* ---------- Repère parties communes (méthode hôtelière) ---------- */
+function renderCommuns(g){
+  g = g || globalTotals();
+  const pv=g.pv;
+  if($('commPv')) $('commPv').textContent=EUR.format(Math.round(pv));
+  const roomsB=$('commRooms')?parseNum($('commRooms').value):0;
+  const surf=$('commSurface')?parseNum($('commSurface').value):0;
+  const cell=$('commPctCell'), vd=$('commVerdict');
+  if(roomsB>0){
+    const pct=pv/roomsB*100;
+    if($('commPct')) $('commPct').textContent=pct.toFixed(1).replace('.',',')+' %';
+    let cls,txt;
+    if(pct<20){ cls='neutral'; txt='sous le repère communs (20-35 %) — budget encore incomplet ou communs légers'; }
+    else if(pct<=35){ cls='ok'; txt='dans le repère hôtelier 20-35 % ✓ proportion saine communs / chambres'; }
+    else { cls='ko'; txt='au-dessus du repère 20-35 % — communs lourds vs chambres, à vérifier'; }
+    if(cell) cell.className='mo-cell '+(cls==='ok'?'good':(cls==='ko'?'bad':''));
+    if(vd){ vd.textContent='Verdict : '+txt+'.'; vd.className='communs-verdict '+cls; }
+  } else {
+    if($('commPct')) $('commPct').textContent='—';
+    if(cell) cell.className='mo-cell';
+    if(vd){ vd.textContent='Renseigne le budget des chambres (lot chambres) pour situer tes communs selon la règle 20-35 %.'; vd.className='communs-verdict neutral'; }
+  }
+  if($('commPerKey')) $('commPerKey').textContent = nbRooms>0 ? EUR.format(Math.round(pv/nbRooms)) : '—';
+  if($('commPerM2'))  $('commPerM2').textContent  = surf>0 ? EUR.format(Math.round(pv/surf))+' /m²' : '—';
 }
 // Aligner les PV fourniture sur le prix marché (ajuste la marge par ligne) → change la marge globale
 function alignMarket(){
@@ -727,6 +831,7 @@ function currentState(){
     moLines: [], moMode: 'vente',
     targetA: $('targetA').value, targetB: $('targetB').value,
     pvB: $('pvB').value, nbRooms,
+    commRooms: $('commRooms')?$('commRooms').value:'', commSurface: $('commSurface')?$('commSurface').value:'',
     updated: new Date().toISOString()
   };
 }
@@ -804,6 +909,7 @@ function openDossier(d){
   else if(d.mo){ _pushMo(d.mo, d.mo.mode||'vente'); }
   $('targetA').value=d.targetA||40; $('targetB').value=d.targetB||40; $('pvB').value=d.pvB||'';
   nbRooms=parseNum(d.nbRooms)||1; if($('nbRooms')) $('nbRooms').value=nbRooms;
+  if($('commRooms')) $('commRooms').value=d.commRooms||''; if($('commSurface')) $('commSurface').value=d.commSurface||'';
   setMode(d.mode||'A'); renderLines(); render();
   suppressAutosave=false; setSaveStatus('uptodate');
   toast('📂 « '+d.name+' » ouvert');
@@ -821,6 +927,7 @@ function newDossier(){
   window._curId=null;
   $('dossierName').value=''; $('pvB').value=''; $('targetA').value=40; $('targetB').value=40;
   nbRooms=1; if($('nbRooms')) $('nbRooms').value=1;
+  if($('commRooms')) $('commRooms').value=''; if($('commSurface')) $('commSurface').value='';
   lines=defaultLines();
   setMode('A'); renderLines(); render();
   suppressAutosave=false; setSaveStatus('unnamed');
