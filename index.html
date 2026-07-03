@@ -794,7 +794,7 @@ function openDossier(d){
     if(l.qty!=null){
       return Object.assign(_pd(), {label:l.label||'',type:l.type||'externe',qty:l.qty||0,pu:l.pu||0,
               marginMode:l.marginMode||'pct',marginPct:l.marginPct!=null?l.marginPct:40,marginEur:l.marginEur||0,
-              poseH:l.poseH||0,poseCout:l.poseCout!=null?l.poseCout:60,poseMode:l.poseMode||'pct',posePct:l.posePct!=null?l.posePct:15,poseEur:l.poseEur||0,market:l.market||0});
+              poseH:l.poseH||0,poseCout:l.poseCout!=null?l.poseCout:60,poseMode:l.poseMode||'pct',posePct:l.posePct!=null?l.posePct:15,poseEur:l.poseEur||0,market:l.market||0,marketLow:l.marketLow||0,marketHigh:l.marketHigh||0});
     }
     return Object.assign(_pd(), {label:l.label||'',type:l.type||'externe',qty:1,pu:(l.amount||0),marginMode:'pct',marginPct:Math.round(_effM*100)/100,marginEur:0});
   });
