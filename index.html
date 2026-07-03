@@ -545,6 +545,7 @@ function updLine(i,k,v){
     if(fp) fp.textContent = EUR.format(Math.round(r.fPV));
     if(pp) pp.textContent = EUR.format(Math.round(r.pPV));
     if(fpu) fpu.innerHTML = fPvuHtml(lines[i], r);
+    const tot=$('lnTot'+i); if(tot) tot.textContent = EUR.format(Math.round(r.pv));
   }
   render();
 }
