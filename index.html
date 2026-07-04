@@ -44,6 +44,7 @@
   .modebar button.active{background:var(--card);color:var(--graphite);box-shadow:var(--shadow)}
 
   .grid{display:grid;grid-template-columns:1fr;gap:22px;align-items:start}
+  #panel{order:-1} /* V2 : bloc Résultat + prix de vente remonté en 1er */
 
   .card{background:var(--card);border:1px solid var(--line);border-radius:15px;padding:20px 20px 22px;box-shadow:var(--shadow)}
   .card h2{font-size:16px;font-weight:700;margin-bottom:4px;display:flex;align-items:center;gap:8px}
@@ -253,6 +254,10 @@
   .rcard.pdv .rl{color:rgba(255,255,255,.72)} .rcard.pdv .rv{color:#fff}
   .rcard.marge{background:#eef6f0;border-color:#bfe0cc} .rcard.marge .rv{color:var(--success)}
   .rcard.marge .sub{font-family:'Inter Tight';font-weight:700;font-size:13px;color:var(--sage-deep);margin-top:1px}
+  /* PDV éditable directement dans la case résultat (une seule saisie) */
+  .rcard.pdv .rv-edit{width:100%;background:transparent;border:0;border-bottom:1.5px solid rgba(255,255,255,.35);color:#fff;font-family:'Inter Tight';font-weight:800;font-size:26px;padding:2px 0 4px;outline:none;border-radius:0}
+  .rcard.pdv .rv-edit::placeholder{color:rgba(255,255,255,.55);font-weight:600;font-size:16px}
+  .rcard.pdv .rv-edit:focus{border-bottom-color:#fff}
   /* Analyse avancée + pédago repliables */
   details.adv-wrap{margin-top:18px;border:1px solid var(--line);border-radius:13px;background:#fff;overflow:hidden}
   details.adv-wrap>summary,details.pedago-wrap>summary{cursor:pointer;list-style:none}
@@ -310,25 +315,10 @@
   </div>
 
   <div class="grid">
-    <!-- LEFT : cost lines -->
-    <div class="card">
-      <h2>🧱 Prix de revient (PDR) — débours réel</h2>
+    <!-- CARTE DÉTAIL : lignes de coût (masquée en Devis simple) -->
+    <div class="card detail-only">
+      <h2>🧱 Prix de revient (PDR) — le détail par poste</h2>
       <div class="hint">Tout ce que le dossier coûte vraiment : sous-traitance, fabrication interne, pose, transport, matière, BE, gruttage… Tape les montants en € HT. Le total = ton PDR.</div>
-
-      <!-- Résultat clair (toujours visible) -->
-      <div class="result3">
-        <div class="rcard pdr"><div class="rl">PDR — prix de revient</div><div class="rv" id="r3pdr">0 €</div></div>
-        <div class="rcard pdv"><div class="rl">PDV — prix de vente</div><div class="rv" id="r3pdv">0 €</div></div>
-        <div class="rcard marge"><div class="rl">Marge</div><div class="rv" id="r3marge">0 €</div><div class="sub" id="r3taux">0 %</div></div>
-      </div>
-      <div class="rlegend"><span>🟢 <b>Réel</b> — ce que le dossier fait vraiment</span><span>🟠 <b>Estimé / objectif</b> — cible ou repère (marge cible, PDR max, budget, marché)</span></div>
-
-      <!-- Devis simple : un seul débours -->
-      <div class="simple-only field" style="margin-top:16px">
-        <label style="font-weight:600">Débours total (PDR) — € HT</label>
-        <input id="simpleDebours" class="bigInput" type="text" inputmode="decimal" placeholder="0" oninput="render()">
-        <div class="hint" style="margin-top:6px">Tape le coût total du chantier. Le prix de vente et la marge se calculent à droite selon ta marge cible. Pour détailler par article, passe en « Chiffrage détaillé ».</div>
-      </div>
 
       <div class="lines-wrap detail-only">
       <table>
@@ -418,8 +408,22 @@
 
     </div>
 
-    <!-- RIGHT : inputs + results -->
+    <!-- CARTE RÉSULTAT (remontée en haut) : résultat + prix de vente + marge, tout au même endroit -->
     <div class="card" id="panel">
+      <h2>💰 Résultat &amp; prix de vente</h2>
+      <div class="hint">Ton prix de revient, ton prix de vente et ta marge — tout au même endroit.</div>
+      <div class="result3">
+        <div class="rcard pdr"><div class="rl">PDR — prix de revient</div><div class="rv" id="r3pdr">0 €</div></div>
+        <div class="rcard pdv"><div class="rl">PDV — prix de vente</div><input id="pvB" class="rv-edit" type="text" inputmode="decimal" placeholder="saisis ton prix…" oninput="render()" style="display:none"><div class="rv" id="r3pdv">0 €</div></div>
+        <div class="rcard marge"><div class="rl">Marge</div><div class="rv" id="r3marge">0 €</div><div class="sub" id="r3taux">0 %</div></div>
+      </div>
+      <div class="rlegend"><span>🟢 <b>Réel</b> — ce que le dossier fait vraiment</span><span>🟠 <b>Estimé / objectif</b> — cible ou repère (marge cible, PDR max, budget, marché)</span></div>
+      <div class="simple-only field" style="margin-top:16px">
+        <label style="font-weight:600">Débours total (PDR) — € HT</label>
+        <input id="simpleDebours" class="bigInput" type="text" inputmode="decimal" placeholder="0" oninput="render()">
+        <div class="hint" style="margin-top:6px">Tape le coût total du chantier. Pour détailler par article, passe en « Chiffrage détaillé » (le détail s'affiche en dessous).</div>
+      </div>
+
       <!-- MODE A -->
       <div id="paneA">
         <h2>🎯 Marge cible</h2>
@@ -442,12 +446,8 @@
 
       <!-- MODE B -->
       <div id="paneB" style="display:none">
-        <h2>💶 Prix de vente (PDV)</h2>
-        <div class="hint">Le prix HT auquel le dossier est (ou sera) vendu au client.</div>
-        <div class="field">
-          <label for="pvB">Prix de vente (PDV) — HT</label>
-          <input id="pvB" class="bigInput" type="text" inputmode="decimal" placeholder="0" oninput="render()">
-        </div>
+        <h2>💶 Marge sur ton prix de vente</h2>
+        <div class="hint">Saisis ton PDV dans la case « PDV » en haut. Voici la marge que ça dégage.</div>
         <div class="result-hero">
           <div class="lbl">Marge réelle dégagée</div>
           <div class="val" id="bMarge">0 <small>€</small></div>
@@ -591,7 +591,7 @@ function renderLines(){
       <td class="r"><span class="mgwrap"><button class="mgstep" onclick="bumpMargin(${i},'p',-1)" title="−">−</button>${pMg}<button class="mgtoggle" onclick="toggleLineMargin(${i},'p')" title="Basculer % / €">${l.poseMode==='eur'?'€':'%'}</button><button class="mgstep" onclick="bumpMargin(${i},'p',1)" title="+">+</button></span></td>
       <td class="lcell pv" id="lnPpv${i}">${EUR.format(Math.round(r.pPV))}</td>
       <td class="r sepL"><input class="lin" type="text" inputmode="decimal" value="${l.qty!=null&&l.qty!==''?NUM2.format(l.qty):''}" placeholder="1" oninput="updLine(${i},'qty',this.value)"></td>
-      <td class="r"><input class="lin pu" type="text" inputmode="decimal" value="${l.pu!=null&&l.pu!==''?NUM2.format(l.pu):''}" placeholder="0" oninput="updLine(${i},'pu',this.value)"></td>
+      <td class="r"><input class="lin pu" type="text" inputmode="decimal" value="${l.pu?NUM2.format(l.pu):''}" placeholder="0" oninput="updLine(${i},'pu',this.value)"></td>
       <td class="lcell cost" id="lnFcost${i}">${EUR.format(Math.round(r.fCost))}</td>
       <td class="r"><span class="mgwrap"><button class="mgstep" onclick="bumpMargin(${i},'f',-1)" title="−">−</button>${fMg}<button class="mgtoggle" onclick="toggleLineMargin(${i},'f')" title="Basculer % / €">${l.marginMode==='eur'?'€':'%'}</button><button class="mgstep" onclick="bumpMargin(${i},'f',1)" title="+">+</button></span></td>
       <td class="lcell pv" id="lnFpv${i}">${EUR.format(Math.round(r.fPV))}</td>
@@ -743,6 +743,9 @@ function setMode(m){
   $('mB').classList.toggle('active',m==='B');
   $('paneA').style.display = m==='A'?'block':'none';
   $('paneB').style.display = m==='B'?'block':'none';
+  // PDV : une seule saisie, dans la case résultat. Éditable en mode B, calculée (affichage) sinon.
+  if($('pvB')) $('pvB').style.display = m==='B'?'block':'none';
+  if($('r3pdv')) $('r3pdv').style.display = m==='B'?'none':'block';
   render();
 }
 /* ---------- V2 : type de chiffrage (simple / detail / hotel) ---------- */
@@ -1068,6 +1071,9 @@ function newDossier(){
 /* ---------- Toast ---------- */
 let _tt;
 function toast(m){ const s=$('status'); s.textContent=m; s.classList.add('show'); clearTimeout(_tt); _tt=setTimeout(()=>s.classList.remove('show'),2400); }
+
+/* ---------- Confort de saisie : sélection auto au clic (plus besoin de supprimer) ---------- */
+document.addEventListener('focusin',e=>{ const t=e.target; if(t&&t.tagName==='INPUT'&&(t.type==='text'||t.getAttribute('inputmode')==='decimal')){ setTimeout(()=>{ try{ t.select(); }catch(_){ } },0); } });
 
 /* ---------- Init ---------- */
 lines=defaultLines();
