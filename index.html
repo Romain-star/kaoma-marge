@@ -4,33 +4,42 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>KAOMA Marge — Calculateur de marge</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='24' fill='%231F2937'/%3E%3Ctext x='50' y='73' font-family='Arial,Helvetica,sans-serif' font-size='66' font-weight='800' fill='%23FAF6EC' text-anchor='middle'%3EK%3C/text%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@500;600;700;800&family=Inter:wght@400;500;600&family=Roboto+Slab:wght@600;700;800;900&display=swap" rel="stylesheet">
 <style>
   :root{
-    --graphite:#1F2937; --paper:#FBF7F3; --sage:#5A7A5A; --sage-deep:#3F5A3F;
-    --peach:#F5C2A5; --mint:#A8DCD4; --success:#058352; --warning:#C8950F;
-    --danger:#C44A3D; --info:#16726B;
-    --line:#E7E0D8; --card:#FFFFFF; --muted:#6B7280;
-    --shadow:0 1px 3px rgba(31,41,55,.06),0 8px 24px rgba(31,41,55,.05);
+    /* Airtable — accents & neutres */
+    --onyx:#181d26; --charcoal:#333840; --steel:#9297a0; --silver:#e0e2e6;
+    --midnight:#040e20; --cobalt:#1b61c9; --sapphire:#254fad; --terracotta:#aa2d00;
+    --peach-glow:#fcab79; --forest:#0a2e0e; --marigold:#fcb42a; --pale-sky:#c7e5f2; --frost:#f8fafc;
+    /* Sémantique app (mappée Airtable) */
+    --graphite:#181d26; --paper:#faf5e8; --sage:#5A7A5A; --sage-deep:#3F5A3F;
+    --peach:#fcab79; --mint:#c7e5f2; --success:#0a7a4a; --warning:#C8950F;
+    --danger:#aa2d00; --info:#254fad;
+    --line:#e5dfd1; --card:#FFFFFF; --muted:#525965; --text:#333840;
+    --shadow:rgba(15,48,106,.05) 0px 0px 20px 0px;
+    --shadow-btn:rgba(0,0,0,.32) 0px 0px 1px 0px,rgba(0,0,0,.08) 0px 0px 2px 0px,rgba(45,127,249,.28) 0px 1px 3px 0px,rgba(0,0,0,.06) 0px 0px 0px .5px inset;
+    --radius-card:16px; --radius-btn:12px; --radius-tag:32px;
   }
   *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:'Inter',system-ui,sans-serif;background:var(--paper);color:var(--graphite);line-height:1.5;-webkit-font-smoothing:antialiased}
+  body{font-family:'Inter',system-ui,sans-serif;background:var(--paper);color:var(--text);line-height:1.5;-webkit-font-smoothing:antialiased}
+  input::placeholder,textarea::placeholder{color:var(--steel)}
   h1,h2,h3,h4{font-family:'Inter Tight',sans-serif;letter-spacing:-.02em}
-  .wrap{max-width:1180px;margin:0 auto;padding:20px 18px 80px}
+  .wrap{max-width:1120px;margin:0 auto;padding:36px 22px 96px}
 
   /* Header */
-  header{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;padding:14px 0 22px;border-bottom:1px solid var(--line);margin-bottom:26px}
+  header{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;padding:6px 0 26px;border-bottom:1px solid var(--line);margin-bottom:34px}
   .brand{display:flex;align-items:center;gap:12px}
   .logo{width:40px;height:40px;border-radius:10px;background:var(--graphite);color:var(--paper);display:grid;place-items:center;font-family:'Inter Tight';font-weight:800;font-size:20px}
   .brand h1{font-size:21px;font-weight:800}
   .brand .sub{font-size:12px;color:var(--muted);font-weight:500}
   .dossier-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
   .dossier-bar input{font-family:'Inter Tight';font-weight:600;font-size:15px;padding:9px 13px;border:1px solid var(--line);border-radius:9px;background:var(--card);min-width:200px;color:var(--graphite)}
-  .btn{font-family:'Inter';font-weight:600;font-size:13.5px;padding:9px 15px;border-radius:9px;border:1px solid var(--line);background:var(--card);color:var(--graphite);cursor:pointer;transition:.12s;display:inline-flex;align-items:center;gap:6px}
+  .btn{font-family:'Inter';font-weight:600;font-size:13.5px;padding:10px 16px;border-radius:var(--radius-btn);border:1px solid var(--line);background:var(--card);color:var(--graphite);cursor:pointer;transition:.12s;display:inline-flex;align-items:center;gap:6px}
   .btn:hover{border-color:var(--graphite)}
-  .btn.primary{background:var(--graphite);color:var(--paper);border-color:var(--graphite)}
+  .btn.primary{background:var(--graphite);color:#fff;border-color:var(--graphite);box-shadow:var(--shadow-btn)}
   .btn.primary:hover{background:#000}
   .btn.ghost{background:transparent}
   .btn.sm{padding:6px 11px;font-size:12.5px}
@@ -43,12 +52,12 @@
   .modebar button small{font-family:'Inter';font-weight:500;font-size:11.5px;opacity:.75}
   .modebar button.active{background:var(--card);color:var(--graphite);box-shadow:var(--shadow)}
 
-  .grid{display:grid;grid-template-columns:1fr;gap:22px;align-items:start}
+  .grid{display:grid;grid-template-columns:1fr;gap:32px;align-items:start}
   #panel{order:-1} /* V2 : bloc Résultat + prix de vente remonté en 1er */
 
-  .card{background:var(--card);border:1px solid var(--line);border-radius:15px;padding:20px 20px 22px;box-shadow:var(--shadow)}
-  .card h2{font-size:16px;font-weight:700;margin-bottom:4px;display:flex;align-items:center;gap:8px}
-  .card .hint{font-size:12.5px;color:var(--muted);margin-bottom:16px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius-card);padding:30px 28px 32px;box-shadow:var(--shadow)}
+  .card h2{font-size:24px;font-weight:800;letter-spacing:-.03em;margin-bottom:6px;display:flex;align-items:center;gap:9px;color:var(--midnight)}
+  .card .hint{font-size:14px;color:var(--muted);margin-bottom:20px;line-height:1.45;max-width:60ch}
   .eyebrow{font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--sage)}
 
   /* Cost table */
@@ -62,9 +71,9 @@
   .line-row input[type=text]:focus{border-color:var(--line);background:#fff;outline:none}
   .amt{width:118px;text-align:right;border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:13.5px;font-family:'Inter Tight';font-weight:600;background:#fff}
   .amt:focus{outline:none;border-color:var(--sage)}
-  .tag{font-size:10.5px;font-weight:600;padding:2px 7px;border-radius:20px;background:#f0ece6;color:var(--muted);border:0;cursor:pointer;font-family:'Inter'}
-  .tag.interne{background:#e3efe3;color:var(--sage-deep)}
-  .tag.externe{background:#fdeee4;color:#a35a32}
+  .tag{font-size:10.5px;font-weight:600;padding:3px 10px;border-radius:var(--radius-tag);background:#f0ece2;color:var(--muted);border:0;cursor:pointer;font-family:'Inter'}
+  .tag.interne{background:#e6efe0;color:var(--sage-deep)}
+  .tag.externe{background:#fbe6d6;color:var(--terracotta)}
   .del{color:var(--muted);background:transparent;border:0;cursor:pointer;font-size:16px;line-height:1;padding:4px 6px;border-radius:6px}
   .del:hover{color:var(--danger);background:#fbeae7}
   .total-row td{border-top:2px solid var(--graphite);padding-top:12px;font-family:'Inter Tight';font-weight:800;font-size:16px}
@@ -243,7 +252,7 @@
   .simple-only{display:none}
   body.chi-simple .simple-only{display:block}
   body.chi-simple .detail-only{display:none}
-  body.chi-simple .adv-wrap,body.chi-detail .adv-wrap{display:none}
+  body.chi-simple .adv-wrap{display:none}
   /* Bloc résultat clair (PDR · PDV · Marge) */
   .result3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:2px 0 4px}
   @media(max-width:560px){.result3{grid-template-columns:1fr}}
@@ -258,16 +267,19 @@
   .rcard.pdv .rv-edit{width:100%;background:transparent;border:0;border-bottom:1.5px solid rgba(255,255,255,.35);color:#fff;font-family:'Inter Tight';font-weight:800;font-size:26px;padding:2px 0 4px;outline:none;border-radius:0}
   .rcard.pdv .rv-edit::placeholder{color:rgba(255,255,255,.55);font-weight:600;font-size:16px}
   .rcard.pdv .rv-edit:focus{border-bottom-color:#fff}
-  /* Analyse avancée + pédago repliables */
-  details.adv-wrap{margin-top:18px;border:1px solid var(--line);border-radius:13px;background:#fff;overflow:hidden}
-  details.adv-wrap>summary,details.pedago-wrap>summary{cursor:pointer;list-style:none}
+  /* Sections repliables (Analyse avancée, Comprendre la marge) + toggle colonnes — style unifié, visible */
+  details.adv-wrap,details.pedago-wrap{margin-top:22px;border:1px solid var(--line);border-radius:var(--radius-card);background:var(--card);overflow:hidden;box-shadow:var(--shadow)}
+  details.adv-wrap>summary,details.pedago-wrap>summary{cursor:pointer;list-style:none;font-family:'Inter Tight';font-weight:700;font-size:15px;color:var(--graphite);display:flex;align-items:center;gap:10px;padding:16px 20px;transition:.12s}
   details.adv-wrap>summary::-webkit-details-marker,details.pedago-wrap>summary::-webkit-details-marker{display:none}
-  details.adv-wrap>summary{padding:13px 17px;font-family:'Inter Tight';font-weight:700;font-size:13.5px;color:var(--graphite);display:flex;align-items:center;gap:8px;background:#faf7f3}
-  details.adv-wrap>summary::after,details.pedago-wrap>summary::after{content:'▸';margin-left:auto;transition:.2s;color:var(--muted)}
-  details.adv-wrap[open]>summary::after,details.pedago-wrap[open]>summary::after{transform:rotate(90deg)}
-  details.adv-wrap .adv-body{padding:6px 17px 16px}
-  details.pedago-wrap{margin-top:22px}
-  details.pedago-wrap>summary{font-family:'Inter Tight';font-weight:700;font-size:14.5px;color:var(--sage-deep);display:flex;align-items:center;gap:8px;padding:12px 2px}
+  details.adv-wrap>summary:hover,details.pedago-wrap>summary:hover{background:var(--frost)}
+  details.adv-wrap>summary::after,details.pedago-wrap>summary::after{content:'⌄';margin-left:auto;font-size:19px;line-height:1;color:var(--muted);transition:.25s}
+  details.adv-wrap[open]>summary::after,details.pedago-wrap[open]>summary::after{transform:rotate(-180deg)}
+  details.adv-wrap[open]>summary,details.pedago-wrap[open]>summary{border-bottom:1px solid var(--line)}
+  details.adv-wrap .adv-body{padding:14px 20px 20px}
+  details.pedago-wrap>summary{color:var(--sage-deep)}
+  details.pedago-wrap .pedago{border:0;border-radius:0;margin-top:0;box-shadow:none;padding:18px 20px 20px}
+  #colToggle{border:1px solid var(--line);border-radius:var(--radius-tag);background:var(--card);padding:9px 16px;font-weight:600;color:var(--graphite);box-shadow:var(--shadow)}
+  #colToggle:hover{border-color:var(--graphite);background:var(--frost)}
   /* Coût par ligne + réel vs estimé */
   .lcell.cost{color:var(--sage-deep);font-weight:700}
   .lines-wrap thead th.gcost{background:#e8efe8;color:var(--sage-deep)}
@@ -277,6 +289,13 @@
   .kpi.est .lbl{color:#7a5b08}
   .kpi.est .val{color:var(--warning)}
   .kpi.est .lbl::after{content:' · estimé';font-size:9.5px;font-weight:700;opacity:.85}
+  /* Tableau — vue « essentiel » (pose & marché repliés pour l'essentiel en un coup d'œil) */
+  .colbar{display:flex;justify-content:flex-end;align-items:center;gap:8px;margin-bottom:8px}
+  .lines-wrap.ess .colPose,.lines-wrap.ess thead th.gPose,.lines-wrap.ess .colMkt,.lines-wrap.ess thead th.gMkt{display:none}
+  .lines-wrap.ess table{min-width:0;width:100%}
+  .lines-wrap.ess tbody td{width:1%;white-space:nowrap}
+  .lines-wrap.ess tbody td:first-child{width:auto}
+  .lines-wrap.ess tbody td:first-child input{width:100%;min-width:160px}
 </style>
 </head>
 <body>
@@ -299,8 +318,7 @@
 
   <div class="chibar" id="chibar">
     <button id="chiSimple" onclick="setChi('simple')">🧾 Devis simple <small>PDR → PDV → marge</small></button>
-    <button id="chiDetail" onclick="setChi('detail')">📋 Chiffrage détaillé <small>par articles (Qté × PU)</small></button>
-    <button id="chiHotel" onclick="setChi('hotel')">🏨 Hôtel / DPGF <small>+ marché · budget · communs · pose</small></button>
+    <button id="chiDetail" onclick="setChi('detail')">📋 Chiffrage détaillé <small>par articles · + analyse avancée</small></button>
   </div>
 
   <div class="modebar">
@@ -320,6 +338,8 @@
       <h2>🧱 Prix de revient (PDR) — le détail par poste</h2>
       <div class="hint">Tout ce que le dossier coûte vraiment : sous-traitance, fabrication interne, pose, transport, matière, BE, gruttage… Tape les montants en € HT. Le total = ton PDR.</div>
 
+      <div class="colbar detail-only"><button class="btn sm" id="colToggle" onclick="toggleCols()">👁 Colonnes : Essentiel</button></div>
+      <datalist id="posteSuggest"></datalist>
       <div class="lines-wrap detail-only">
       <table>
         <thead>
@@ -420,7 +440,7 @@
       <div class="rlegend"><span>🟢 <b>Réel</b> — ce que le dossier fait vraiment</span><span>🟠 <b>Estimé / objectif</b> — cible ou repère (marge cible, PDR max, budget, marché)</span></div>
       <div class="simple-only field" style="margin-top:16px">
         <label style="font-weight:600">Débours total (PDR) — € HT</label>
-        <input id="simpleDebours" class="bigInput" type="text" inputmode="decimal" placeholder="0" oninput="render()">
+        <input id="simpleDebours" class="bigInput" type="text" inputmode="decimal" placeholder="0" oninput="setSimpleDebours(this.value)">
         <div class="hint" style="margin-top:6px">Tape le coût total du chantier. Pour détailler par article, passe en « Chiffrage détaillé » (le détail s'affiche en dessous).</div>
       </div>
 
@@ -583,13 +603,13 @@ function renderLines(){
     const pMg=mgInputHtml(i,l.poseMode||'pct',l.posePct,l.poseEur,'posePct','poseEur');
     const tr=document.createElement('tr'); tr.className='line-row';
     tr.innerHTML=`
-      <td><input type="text" value="${escapeHtml(l.label)}" placeholder="Nom du poste…" oninput="updLine(${i},'label',this.value)"></td>
+      <td><input type="text" list="posteSuggest" value="${escapeHtml(l.label)}" placeholder="Nom du poste…" oninput="updLine(${i},'label',this.value)" onchange="savePoste(this.value)"></td>
       <td><button class="tag ${l.type}" onclick="toggleType(${i})" title="Cliquer pour basculer interne/externe">${l.type}</button></td>
-      <td class="r"><input class="lin" type="text" inputmode="decimal" value="${l.poseH?NUM2.format(l.poseH):''}" placeholder="0" oninput="updLine(${i},'poseH',this.value)"></td>
-      <td class="r"><input class="lin" type="text" inputmode="decimal" value="${l.poseCout!=null&&l.poseCout!==''?NUM2.format(l.poseCout):''}" placeholder="40" oninput="updLine(${i},'poseCout',this.value)"></td>
-      <td class="lcell cost" id="lnPcost${i}">${EUR.format(Math.round(r.pCost))}</td>
-      <td class="r"><span class="mgwrap"><button class="mgstep" onclick="bumpMargin(${i},'p',-1)" title="−">−</button>${pMg}<button class="mgtoggle" onclick="toggleLineMargin(${i},'p')" title="Basculer % / €">${l.poseMode==='eur'?'€':'%'}</button><button class="mgstep" onclick="bumpMargin(${i},'p',1)" title="+">+</button></span></td>
-      <td class="lcell pv" id="lnPpv${i}">${EUR.format(Math.round(r.pPV))}</td>
+      <td class="r colPose"><input class="lin" type="text" inputmode="decimal" value="${l.poseH?NUM2.format(l.poseH):''}" placeholder="0" oninput="updLine(${i},'poseH',this.value)"></td>
+      <td class="r colPose"><input class="lin" type="text" inputmode="decimal" value="${l.poseCout!=null&&l.poseCout!==''?NUM2.format(l.poseCout):''}" placeholder="40" oninput="updLine(${i},'poseCout',this.value)"></td>
+      <td class="lcell cost colPose" id="lnPcost${i}">${EUR.format(Math.round(r.pCost))}</td>
+      <td class="r colPose"><span class="mgwrap"><button class="mgstep" onclick="bumpMargin(${i},'p',-1)" title="−">−</button>${pMg}<button class="mgtoggle" onclick="toggleLineMargin(${i},'p')" title="Basculer % / €">${l.poseMode==='eur'?'€':'%'}</button><button class="mgstep" onclick="bumpMargin(${i},'p',1)" title="+">+</button></span></td>
+      <td class="lcell pv colPose" id="lnPpv${i}">${EUR.format(Math.round(r.pPV))}</td>
       <td class="r sepL"><input class="lin" type="text" inputmode="decimal" value="${l.qty!=null&&l.qty!==''?NUM2.format(l.qty):''}" placeholder="1" oninput="updLine(${i},'qty',this.value)"></td>
       <td class="r"><input class="lin pu" type="text" inputmode="decimal" value="${l.pu?NUM2.format(l.pu):''}" placeholder="0" oninput="updLine(${i},'pu',this.value)"></td>
       <td class="lcell cost" id="lnFcost${i}">${EUR.format(Math.round(r.fCost))}</td>
@@ -597,12 +617,27 @@ function renderLines(){
       <td class="lcell pv" id="lnFpv${i}">${EUR.format(Math.round(r.fPV))}</td>
       <td class="lcell cost sepL" id="lnPdr${i}">${EUR.format(Math.round(r.cost))}</td>
       <td class="lcell pv" id="lnTot${i}">${EUR.format(Math.round(r.pv))}</td>
-      <td class="r sepL"><input class="lin pu" type="text" inputmode="decimal" value="${l.market?NUM2.format(l.market):''}" placeholder="—" oninput="updLine(${i},'market',this.value)"><div class="mktrange">${(l.marketLow&&l.marketHigh)?NUM2.format(l.marketLow)+'–'+NUM2.format(l.marketHigh):''}</div></td>
+      <td class="r sepL colMkt"><input class="lin pu" type="text" inputmode="decimal" value="${l.market?NUM2.format(l.market):''}" placeholder="—" oninput="updLine(${i},'market',this.value)"><div class="mktrange">${(l.marketLow&&l.marketHigh)?NUM2.format(l.marketLow)+'–'+NUM2.format(l.marketHigh):''}</div></td>
       <td class="r"><button class="del" onclick="delLine(${i})" title="Supprimer">×</button></td>`;
     tb.appendChild(tr);
   });
 }
 function escapeHtml(s){return String(s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+/* ---------- Postes mémorisés : autocomplétion inter-dossiers (ne plus retaper) ---------- */
+function cleanLabel(s){
+  s=String(s||'').replace(/\s+/g,' ').trim(); if(!s) return '';
+  const hasLower=/[a-zà-ÿ]/.test(s), hasUpper=/[A-ZÀ-Ÿ]/.test(s);
+  if(!hasLower || !hasUpper){ s=s.charAt(0).toUpperCase()+s.slice(1).toLowerCase(); } // ALL CAPS ou tout minuscule -> 1re lettre en majuscule
+  return s;
+}
+const POSTE_SEED=["Bureau d'études","Transport","Pose","Sous-traitance","Fabrication interne","Matière","Gruttage / livraison étages","Rétrocession archi","Quincaillerie"];
+function loadPostes(){ try{ const a=JSON.parse(localStorage.getItem('kaoma_postes')||'null'); return (Array.isArray(a)&&a.length)?a:POSTE_SEED.slice(); }catch(e){ return POSTE_SEED.slice(); } }
+function savePoste(label){
+  const c=cleanLabel(label); if(c.length<2) return;
+  const arr=loadPostes();
+  if(!arr.some(x=>x.toLowerCase()===c.toLowerCase())){ arr.push(c); arr.sort((a,b)=>a.localeCompare(b,'fr')); try{localStorage.setItem('kaoma_postes',JSON.stringify(arr));}catch(e){} populatePosteSuggest(); }
+}
+function populatePosteSuggest(){ const dl=$('posteSuggest'); if(!dl) return; dl.innerHTML=loadPostes().map(p=>'<option value="'+escapeHtml(p)+'"></option>').join(''); }
 function newLineObj(label,type){ const m=parseNum($('targetA').value)||40; return {label:label||'',type:type||'externe',qty:1,pu:0,marginMode:'pct',marginPct:m,marginEur:0,poseH:0,poseCout:60,poseMode:'pct',posePct:15,poseEur:0,market:0}; }
 function addLine(label,type){ lines.push(newLineObj(label,type)); renderLines(); render(); }
 function delLine(i){ snapshotUndo(); lines.splice(i,1); renderLines(); render(); }
@@ -749,14 +784,28 @@ function setMode(m){
   render();
 }
 /* ---------- V2 : type de chiffrage (simple / detail / hotel) ---------- */
-function currentPDR(){ return (chi==='simple' && $('simpleDebours')) ? parseNum($('simpleDebours').value) : totalCost(); }
+function currentPDR(){ return totalCost(); } // PDR = total des lignes, identique dans TOUS les modes (partagé)
 function applyChi(){
   document.body.classList.remove('chi-simple','chi-detail','chi-hotel');
   document.body.classList.add('chi-'+chi);
-  const map={simple:'chiSimple',detail:'chiDetail',hotel:'chiHotel'};
-  ['chiSimple','chiDetail','chiHotel'].forEach(id=>{const b=$(id);if(b)b.classList.toggle('active',id===map[chi]);});
+  const map={simple:'chiSimple',detail:'chiDetail'};
+  ['chiSimple','chiDetail'].forEach(id=>{const b=$(id);if(b)b.classList.toggle('active',id===map[chi]);});
 }
-function setChi(m){ chi=m; try{localStorage.setItem('kaoma_chi',m);}catch(e){} applyChi(); render(); }
+function setChi(m){
+  chi=m; try{localStorage.setItem('kaoma_chi',m);}catch(e){} applyChi();
+  if(m==='simple' && $('simpleDebours')){ const t=totalCost(); if(t>0 && !parseNum($('simpleDebours').value)) $('simpleDebours').value=NUM.format(Math.round(t)); }
+  render();
+}
+// Devis simple : le débours saisi = le PDR (une seule ligne), partagé avec les autres modes
+function setSimpleDebours(v){
+  const m=parseNum($('targetA').value)||40;
+  lines=[{label:'Débours total (devis simple)',type:'externe',qty:1,pu:parseNum(v),marginMode:'pct',marginPct:m,marginEur:0,poseH:0,poseCout:60,poseMode:'pct',posePct:15,poseEur:0,market:0}];
+  renderLines(); render();
+}
+// Tableau : bascule vue essentielle / complète (pose & marché repliés)
+let colsEss=true;
+function applyCols(){ const w=document.querySelector('.lines-wrap'); if(w) w.classList.toggle('ess',colsEss); const b=$('colToggle'); if(b) b.textContent = colsEss?'👁 Colonnes : Essentiel (pose & marché masqués)':'👁 Colonnes : tout afficher'; }
+function toggleCols(){ colsEss=!colsEss; try{localStorage.setItem('kaoma_cols',colsEss?'ess':'all');}catch(e){} applyCols(); }
 
 /* ---------- Core render ---------- */
 function render(){
@@ -1042,7 +1091,7 @@ function openDossier(d){
   $('targetA').value=d.targetA||40; $('targetB').value=d.targetB||40; $('pvB').value=d.pvB||'';
   nbRooms=parseNum(d.nbRooms)||1; if($('nbRooms')) $('nbRooms').value=nbRooms;
   if($('commRooms')) $('commRooms').value=d.commRooms||''; if($('commSurface')) $('commSurface').value=d.commSurface||'';
-  if($('simpleDebours')) $('simpleDebours').value=d.simpleDebours||''; if(d.chi){ chi=d.chi; applyChi(); }
+  if($('simpleDebours')) $('simpleDebours').value=d.simpleDebours||''; chi=(d.chi==='hotel')?'detail':(d.chi||chi); applyChi();
   setMode(d.mode||'A'); renderLines(); render();
   suppressAutosave=false; setSaveStatus('uptodate');
   toast('📂 « '+d.name+' » ouvert');
@@ -1078,9 +1127,13 @@ document.addEventListener('focusin',e=>{ const t=e.target; if(t&&t.tagName==='IN
 /* ---------- Init ---------- */
 lines=defaultLines();
 try{ chi=localStorage.getItem('kaoma_chi')||'detail'; }catch(e){ chi='detail'; }
+if(chi==='hotel') chi='detail'; // Hôtel/DPGF fusionné dans Chiffrage détaillé
+try{ colsEss=(localStorage.getItem('kaoma_cols')||'ess')==='ess'; }catch(e){ colsEss=true; }
+populatePosteSuggest();
 applyChi();
 suppressAutosave=true;
 renderLines(); render();
+applyCols();
 suppressAutosave=false;
 checkApi();
 </script>
