@@ -503,7 +503,7 @@
       <div class="result3">
         <div class="rcard pdr"><div class="rl">PDR — prix de revient</div><div class="rv" id="r3pdr">0 €</div></div>
         <div class="rcard pdv"><div class="rl">PDV — prix de vente</div><input id="pvB" class="rv-edit" type="text" inputmode="decimal" placeholder="saisis ton prix…" oninput="render()" style="display:none"><div class="rv" id="r3pdv">0 €</div></div>
-        <div class="rcard marge"><div class="rl">Marge</div><div class="rv" id="r3marge">0 €</div><div class="sub" id="r3taux">0 %</div></div>
+        <div class="rcard marge"><div class="rl">Marge</div><div class="rv" id="r3marge">0 €</div><div class="sub"><span id="r3taux">0 %</span> · coef <span id="r3coef">×0</span></div></div>
       </div>
       <div class="rlegend"><span>🟢 <b>Réel</b> — ce que le dossier fait vraiment</span><span>🟠 <b>Estimé / objectif</b> — cible ou repère (marge cible, PDR max, budget, marché)</span></div>
       <div class="simple-only field" style="margin-top:16px">
@@ -522,28 +522,14 @@
             <span class="pct"><span id="targetApct">40</span>%</span>
           </div>
         </div>
-        <div class="result-hero">
-          <div class="lbl">Prix de vente (PDV) conseillé — HT</div>
-          <div class="val" id="aPV">0 <small>€</small></div>
-        </div>
-        <div class="kpis">
-          <div class="kpi good"><div class="lbl">Marge dégagée</div><div class="val" id="aMarge">0 €</div></div>
-          <div class="kpi"><div class="lbl">Coefficient sur PDR</div><div class="val" id="aCoef">×0</div></div>
-        </div>
+        <div class="hint" style="margin-top:4px">Ton PDV conseillé, ta marge et le coefficient s'affichent dans les cartes ci-dessus.</div>
       </div>
 
       <!-- MODE B -->
       <div id="paneB" style="display:none">
         <h2>💶 Marge sur ton prix de vente</h2>
         <div class="hint">Saisis ton PDV dans la case « PDV » en haut. Voici la marge que ça dégage.</div>
-        <div class="result-hero">
-          <div class="lbl">Marge réelle dégagée</div>
-          <div class="val" id="bMarge">0 <small>€</small></div>
-        </div>
-        <div class="kpis">
-          <div class="kpi"><div class="lbl">Taux de marge réel</div><div class="val" id="bTaux">0 %</div></div>
-          <div class="kpi"><div class="lbl">Coefficient sur PDR</div><div class="val" id="bCoef">×0</div></div>
-        </div>
+        <!-- marge, taux et coefficient sont affichés dans les cartes du haut (pas de doublon) -->
         <div class="field" style="margin-top:16px">
           <label>Comparaison à ton objectif <span id="bObjpct">40</span>% &nbsp;
             <input id="targetB" type="range" min="0" max="80" step="1" value="40" oninput="render()" style="vertical-align:middle;width:120px;accent-color:var(--sage)">
@@ -893,16 +879,10 @@ function render(){
     PV = t<1 ? D/(1-t) : 0;
     marge = PV - D;
     taux = t;
-    $('aPV').innerHTML = NUM.format(Math.round(PV))+' <small>€</small>';
-    $('aMarge').textContent = EUR.format(Math.round(marge));
-    $('aCoef').textContent = D>0 ? '×'+(PV/D).toFixed(3).replace('.',',') : '×0';
   } else {
     PV = parseNum($('pvB').value);
     marge = PV - D;
     taux = PV>0 ? marge/PV : 0;
-    $('bMarge').innerHTML = NUM.format(Math.round(marge))+' <small>€</small>';
-    $('bTaux').textContent = (taux*100).toFixed(1).replace('.',',')+' %';
-    $('bCoef').textContent = D>0 ? '×'+(PV/D).toFixed(3).replace('.',',') : '×0';
     // budget vs réel (logique velleda)
     const budget = PV*(1-tB);
     const ecart = budget - D; // positif = sous budget = marge bonus
@@ -913,11 +893,7 @@ function render(){
     // color margin kpi
   }
 
-  // hero margin color in B
-  if(mode==='B'){
-    const heroGood = marge>=0;
-    $('bMarge').parentElement.style.opacity=1;
-  }
+  // (marge, taux et coefficient sont affichés dans les cartes du haut — plus de doublon)
 
   // Decomposition bar
   const safePV = PV>0?PV:0;
@@ -979,6 +955,7 @@ function render(){
     if($('r3pdv'))   $('r3pdv').textContent   = EUR.format(Math.round(Rpdv));
     if($('r3marge')) $('r3marge').textContent = EUR.format(Math.round(Rmarge));
     if($('r3taux'))  $('r3taux').textContent  = (Rtaux*100).toFixed(1).replace('.',',')+' % de marge';
+    if($('r3coef'))  $('r3coef').textContent  = Rpdr>0 ? '×'+(Rpdv/Rpdr).toFixed(3).replace('.',',') : '×0';
   }
 
   if(!suppressAutosave) scheduleAutosave();
